@@ -1,2 +1,10 @@
-# MiniBart
-An ongoing project of developing a multilingual translator. The end-goal is to create a translator that can translate multiple languages to English. To make it easy, I'm going to start with French-German to English translation.
+# MiniBartEUW
+A multilingual neural machine translator that can translate from multiple Western European languages to Englisha and vice-versa! The model is based on Meta's MBart, but scaled smaller for faster training process.
+
+## Objective
+
+## Data pre-processing
+
+## Architecture and setup
+
+## Results
