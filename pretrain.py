@@ -15,8 +15,6 @@ parser.add_argument('--batch-size', '-b', type=int, default=32)
 parser.add_argument('--epochs', '-e', type=int, default=1000)
 args = parser.parse_args()
 
-print(args.epochs)
-
 # Setup
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -41,7 +39,7 @@ def text_transforms(tensor, maxlen):
         )
     return transforms(tensor)
 
-pretrain_dataset = MiniBartPreTraining('', 'pretraining_texts.pkl')
+pretrain_dataset = MiniBartPreTraining('', 'MiniBart/pretraining_datasets.pkl')
 
 # Get vocabulary information
 BOS_IDX = 0
@@ -58,8 +56,9 @@ def collate_fn(batch):
 
     src_batch = pad_sequence(src_batch, padding_value=PAD_IDX)
     tgt_batch = pad_sequence(tgt_batch, padding_value=PAD_IDX)
+    return src_batch, tgt_batch
 
-pretrain_dataloader = DataLoader(pretrain_dataset, batch_size=args.batch_size, shuffle=True)
+pretrain_dataloader = DataLoader(pretrain_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
 model = Seq2SeqTransformer(
     VOCAB_SIZE,
@@ -94,6 +93,8 @@ def TrainingStep(
     for i, data in enumerate(train_dataloader):
         # Dims of the tokens (Batch Size, Seq Len)
         src, tgt = data
+        print(src.shape)
+        print(tgt.shape)
         src = src.to(DEVICE)
         tgt = tgt.to(DEVICE)
 

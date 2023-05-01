@@ -62,17 +62,22 @@ class Seq2SeqTransformer(nn.Module):
         # Create the masks
         src_padding_mask, tgt_padding_mask = self.make_padding_masks(src, tgt)
         peaking_mask = self.transformer.generate_square_subsequent_mask(tgt.shape[0], self.device)
+        
+        # Create token embeddings
+        src_emb = self.emb_pos(self.src_embedding(src))
+        tgt_emb = self.emb_pos(self.tgt_embedding(tgt))
+        
+        # Transformer outputs
+        decoder_outputs = self.transformer(
+            src=src_emb,
+            tgt=tgt_emb,
+            tgt_mask=peaking_mask,
+            src_key_padding_mask=src_padding_mask,
+            tgt_key_padding_mask=tgt_padding_mask
+            )
 
         # Transformer block
-        outputs = self.final_linear(
-            self.transformer(
-                src=src,
-                tgt=tgt,
-                tgt_mask=peaking_mask,
-                src_key_padding_mask=src_padding_mask,
-                tgt_key_padding_mask=tgt_padding_mask
-            )
-        )
+        outputs = self.final_linear(decoder_outputs)
         
         return outputs
  
