@@ -1,4 +1,3 @@
-torch
 torchtext
 torchdata
 tokenizers
