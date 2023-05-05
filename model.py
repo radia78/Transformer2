@@ -7,7 +7,7 @@ Author: Radi Akbar
 Date: 4/11/2023
 '''
 
-class Seq2SeqTransformer(nn.Module):
+class MiniBartEUW(nn.Module):
     def __init__(self,
                  vocab_size:int,
                  maxlen:int,
@@ -19,7 +19,7 @@ class Seq2SeqTransformer(nn.Module):
                  pad_idx:int,
                  device
                  ):
-        super(Seq2SeqTransformer, self).__init__()
+        super(MiniBartEUW, self).__init__()
 
         self.device = device
         self.pad_idx = pad_idx
@@ -46,7 +46,7 @@ class Seq2SeqTransformer(nn.Module):
     def _init_weights(self):
         for p in self.parameters():
             if p.dim() > 1:
-                nn.init.xavier_uniform_(p)
+                nn.init.normal_(p, mean=0., std=0.02)
 
     def make_padding_masks(self, src, tgt):
         src_padding_mask = (src == self.pad_idx).transpose(0, 1) # (N, src_len)

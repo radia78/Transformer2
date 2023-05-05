@@ -7,29 +7,18 @@ from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence
 
 class MiniBartPreTraining(Dataset):
-    def __init__(self, 
-                 dataset_path=None,
-                 dataset_filename=None,
-                 spm_model_path=None,
-                 spm_vocab_path=None,
-                 languages=['en', 'fr', 'de']
-                 ):
+    def __init__(self, languages=['en', 'fr', 'de']):
         
         # Checking if the tokenizer path has expired
         try:
             self.tokenizer = T.SentencePieceTokenizer(r"https://download.pytorch.org/models/text/xlmr.sentencepiece.bpe.model")
             self.vocab = T.VocabTransform(load_state_dict_from_url(r"https://download.pytorch.org/models/text/xlmr.vocab.pt")) 
         except:
-            try:
-                self.tokenizer = T.SentencePieceTokenizer(spm_model_path)
-                self.vocab = T.VocabTransform(spm_vocab_path)
-            except:
-                print("Invalid model or vocab path.")
+            print("Link for SPM Tokenizer/Vocab has Expired.")
 
         for l in languages:
             self.vocab.vocab.append_token(f'<{l}>')
 
-        full_filepath = os.path.join(dataset_path, dataset_filename)
         with open(full_filepath, 'rb') as file:
             self.data = pickle.load(file)
 

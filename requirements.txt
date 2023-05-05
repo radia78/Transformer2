@@ -1,4 +1,5 @@
-torchtext
-torchdata
-tokenizers
-portalocker
+torch 
+dask-pytorch-ddp 
+seaborn
+transformers
+datasets

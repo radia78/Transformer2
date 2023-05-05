@@ -1,4 +1,4 @@
-name: dask-saturn
+name: saturn
 channels:
     - pytorch
     - fastai

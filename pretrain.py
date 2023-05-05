@@ -1,6 +1,6 @@
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from transformer import *
+from model import *
 from utils import *
 import argparse
 from datetime import datetime
