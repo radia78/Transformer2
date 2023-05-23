@@ -1,5 +1,6 @@
 from blocks import *
 import torch.functional as F
+from dataclasses import dataclass
 
 class RopeBart(nn.module):
     def __init__(self, config):
@@ -43,3 +44,12 @@ class RopeBart(nn.module):
             # normalize before final linear layer
             x = self.transformer.ln_f(x)
             return self.lm_head(x)
+        
+        @dataclass
+        class RopeBARTConfig:
+            vocab_size: int = 250000
+            n_layer: int = 6
+            n_head: int = 8
+            n_embd: int = 512
+            dropout: float = 0.0
+            bias: bool = True

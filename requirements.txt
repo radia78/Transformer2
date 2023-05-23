@@ -1,5 +1,4 @@
 torch 
-dask-pytorch-ddp 
-seaborn
 transformers
 datasets
+einops
