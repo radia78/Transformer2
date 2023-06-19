@@ -2,18 +2,18 @@ from blocks import *
 import torch.functional as F
 from dataclasses import dataclass
 
-class RopeBart(nn.module):
+class RopeFormer(nn.module):
     def __init__(self, config):
-        super().__init__()
-
+        super(RopeFormer, self).__init__()
+        # assert the vocabulary size
         assert config.vocab_size is not None
         self.config = config
         self.n_layer = config.n_layer
-
+        # assemble the transformer network
         self.transformer = nn.ModuleDict(dict(
             ln_f = nn.LayerNorm(config.n_embd),
-            src_emb = nn.Embedding(config.vocab_size, config.n_emb),
-            tgt_emb = nn.Embedding(config.vocab_size, config.n_emb),
+            src_emb = nn.Embedding(config.vocab_size, config.n_emb, padding_idx=config.pad_idx),
+            tgt_emb = nn.Embedding(config.vocab_size, config.n_emb, padding_idx=config.pad_idx),
             enc = nn.ModuleList([EncoderBlock(config) for _ in range(config.n_layer)]),
             dec = nn.ModuleList([DecoderBlock(config) for _ in range(config.n_layer)])
         ))
@@ -45,11 +45,12 @@ class RopeBart(nn.module):
             x = self.transformer.ln_f(x)
             return self.lm_head(x)
         
-        @dataclass
-        class RopeBARTConfig:
-            vocab_size: int = 250000
-            n_layer: int = 6
-            n_head: int = 8
-            n_embd: int = 512
-            dropout: float = 0.0
-            bias: bool = True
+@dataclass
+class RopeBARTConfig:
+    pad_idx: int = 1
+    vocab_size: int = 250000
+    n_layer: int = 6
+    n_head: int = 8
+    n_embd: int = 512
+    dropout: float = 0.0
+    bias: bool = True

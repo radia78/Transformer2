@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class ROPESelfAttention(nn.Module):
     def __init__(self, config):
-        super().__init__()
+        super(ROPESelfAttention, self).__init__()
         assert config.n_embd % config.n_head == 0
         # positional embedding layer
         self.rotary_emb = Rotary(config.n_emb)
@@ -43,7 +43,7 @@ class ROPESelfAttention(nn.Module):
 
 class ROPECrossAttention(nn.MOdule):
     def __init__(self, config):
-        super().__init__()
+        super(ROPECrossAttention, self).__init__()
         assert config.n_embd % config.n_head == 0
         # positional embedding layer
         self.rotary_emb = Rotary(config.n_emb)
@@ -79,9 +79,10 @@ class ROPECrossAttention(nn.MOdule):
         v = apply_rotary_pos_emb(v, coskv, sinkv)
 
         # efficient attention using Flash Attention CUDA kernels
-        y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=False)
+        y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0.0, is_causal=False)
         y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
 
         # output projection
         y = self.resid_dropout(self.c_proj(y))
         return y
+    

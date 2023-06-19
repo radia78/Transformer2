@@ -7,7 +7,7 @@ def gelu(x):
 
 class MLP(nn.Module):
     def __init__(self, config):
-        super().__init__()
+        super(MLP, self).__init__()
         self.c_fc    = nn.Linear(config.n_embd, 4 * config.n_embd, bias=config.bias)
         self.c_proj  = nn.Linear(4 * config.n_embd, config.n_embd, bias=config.bias)
         self.dropout = nn.Dropout(config.dropout)
@@ -21,7 +21,7 @@ class MLP(nn.Module):
 
 class EncoderBlock(nn.Module):
     def __init__(self, config):
-        super().__init__()
+        super(EncoderBlock, self).__init__()
         self.ln_1 = nn.LayerNorm(config.n_embd)
         self.attn = ROPESelfAttention(config)
         self.ln_2 = nn.LayerNorm(config.n_embd)
@@ -34,7 +34,7 @@ class EncoderBlock(nn.Module):
     
 class DecoderBlock(nn.Module):
     def __init__(self, config):
-        super().__init__()
+        super(DecoderBlock, self).__init__()
         self.ln_1 = nn.LayerNorm(config.n_embd)
         self.self_attn = ROPESelfAttention(config)
         self.ln_2 = nn.LayerNorm(config.n_embd)
@@ -47,3 +47,4 @@ class DecoderBlock(nn.Module):
         x = x + self.cross_attn(self.ln_2(x), m)
         x = x + self.mlp(self.ln_3(x))
         return x
+    
