@@ -33,8 +33,30 @@ def apply_rotary_pos_emb(x, cos, sin):
     return (x * cos) + (rotate_every_two(x) * sin)
 
 # define a unittest for the positional embedding layer
-class ROPETestCase(unittest.TestCase):
-    def test_forward(self):
+class ROPEUnitTest(unittest.TestCase):
+    def test_shapes(self):
+        # apply positional embedding
+        test_input = torch.randn(16, 4, 64, 64)
+        rope = Rotary(test_input.shape[-1])
+        cos, sin = rope(test_input, seq_dim=2)
+        output = apply_rotary_pos_emb(test_input, cos, sin)
+
+        self.assertTrue(output.shape == test_input.shape, "Input shape and output shape must match")
+
+    def test_rotation(self):
+        # define a helper function
+        def rotate_matrix(x, m:int):
+            """Rotate a vector by theta 1 counter clockwise (theta 1 is the angle of the first 2 embeddings)"""
+            assert x.shape == torch.Size([1, 2]), "'x' is not a 2-length vector"
+
+            # compute components
+            theta = 10000**(-2*(1 - 1)/2)
+            sin_comp = np.sin(m * theta)
+            cos_comp = np.cos(m * theta)
+            rotation_matrix = torch.tensor([[cos_comp, sin_comp], [-sin_comp, cos_comp]]).float()
+
+            return torch.matmul(x, rotation_matrix)
+        
         # define the test case 1: [1, 0], [1, 0]
         test_input1 = torch.tensor([[1, 0], [0, 1]]).float()
 
@@ -67,18 +89,5 @@ class ROPETestCase(unittest.TestCase):
         # test case 2
         self.assertTrue(torch.allclose(module_output2, expected_output2)), "Test 2 Failed: Vector is not rotated by theta1"
         
-
-def rotate_matrix(x, m:int):
-    """Rotate a vector by theta 1 counter clockwise (theta 1 is the angle of the first 2 embeddings)"""
-    assert x.shape == torch.Size([1, 2]), "'x' is not a 2-length vector"
-
-    # compute components
-    theta = 10000**(-2*(1 - 1)/2)
-    sin_comp = np.sin(m * theta)
-    cos_comp = np.cos(m * theta)
-    rotation_matrix = torch.tensor([[cos_comp, sin_comp], [-sin_comp, cos_comp]]).float()
-
-    return torch.matmul(x, rotation_matrix)
-
 if __name__ == "__main__":
     unittest.main()
