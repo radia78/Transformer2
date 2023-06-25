@@ -48,3 +48,23 @@ class DecoderBlock(nn.Module):
         x = x + self.mlp(self.ln_3(x))
         return x
     
+class TransformerBlockUnitTest(unittest.TestCase):
+    def test_encoder_block_shape(self):
+        test_input = torch.randn(32, 16, 512) # random input
+        config = TestConfig() # initiate config
+        encoder = EncoderBlock(config) # encoder
+        output = encoder(test_input) # output of the encoder
+
+        self.assertTrue(output.shape == test_input.shape)
+
+    def test_decoder_block_shape(self):
+        test_input = torch.randn(32, 16, 512) # test input
+        test_memory_input = torch.randn(32, 14, 512) # test memory input
+        config = TestConfig() # initiate config
+        decoder = DecoderBlock(config) # initiate the decoder
+        output = decoder(test_input, test_memory_input) # output
+
+        self.assertTrue(output.shape == test_input.shape)
+
+if __name__ == "__main__":
+    unittest.main()

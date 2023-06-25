@@ -1,12 +1,15 @@
-from rope import *
+import unittest
+import torch
 import torch.nn as nn
+from dataclasses import dataclass
+from rope import Rotary, apply_rotary_pos_emb
 
 class ROPESelfAttention(nn.Module):
     def __init__(self, config):
         super(ROPESelfAttention, self).__init__()
-        assert config.n_embd % config.n_head == 0
+        assert config.n_embd % config.n_head == 0, "Embedding dimension is not divisble by number of heads"
         # positional embedding layer
-        self.rotary_emb = Rotary(config.n_emb)
+        self.rotary_emb = Rotary(config.n_embd // config.n_head)
         # key, query, value projections for all heads, but in a batch
         self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias)
         # output projection
@@ -25,13 +28,12 @@ class ROPESelfAttention(nn.Module):
         q, k, v  = self.c_attn(x).split(self.n_embd, dim=-1)
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs), doesn't get rotated
 
         # inject rotary positional embedding
         cos, sin = self.rotary_emb(q, seq_dim=2)
         q = apply_rotary_pos_emb(q, cos, sin)
         k = apply_rotary_pos_emb(k, cos, sin)
-        v = apply_rotary_pos_emb(v, cos, sin)
 
         # efficient attention using Flash Attention CUDA kernels
         y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=causal)
@@ -41,12 +43,12 @@ class ROPESelfAttention(nn.Module):
         y = self.resid_dropout(self.c_proj(y))
         return y
 
-class ROPECrossAttention(nn.MOdule):
+class ROPECrossAttention(nn.Module):
     def __init__(self, config):
         super(ROPECrossAttention, self).__init__()
         assert config.n_embd % config.n_head == 0
         # positional embedding layer
-        self.rotary_emb = Rotary(config.n_emb)
+        self.rotary_emb = Rotary(config.n_embd // config.n_head)
         # query projection for each head in a batch
         self.q_attn = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
         # key, value projection for each head in a batch
@@ -66,17 +68,16 @@ class ROPECrossAttention(nn.MOdule):
 
         # calculate query, key, values for all heads in batch
         q = self.q_attn(x)
-        k, v = self.kv_attn(m).split(2, dim=-1)
+        k, v = self.kv_attn(m).split(self.n_embd, dim=-1)
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         k = k.view(B, S, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, S, hs)
         v = v.view(B, S, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, S, hs)
 
         # inject rotary positional embedding
         cosq, sinq = self.rotary_emb(q, seq_dim=2)
-        coskv, sinkv = self.rotary_emb(k, seq_dim=2)
+        cosk, sink = self.rotary_emb(k, seq_dim=2)
         q = apply_rotary_pos_emb(q, cosq, sinq)
-        k = apply_rotary_pos_emb(k, coskv, sinkv)
-        v = apply_rotary_pos_emb(v, coskv, sinkv)
+        k = apply_rotary_pos_emb(k, cosk, sink)
 
         # efficient attention using Flash Attention CUDA kernels
         y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0.0, is_causal=False)
@@ -85,4 +86,35 @@ class ROPECrossAttention(nn.MOdule):
         # output projection
         y = self.resid_dropout(self.c_proj(y))
         return y
+
+# define the dataclass for testing
+@dataclass
+class TestConfig:
+    n_head: int = 8
+    n_embd: int = 512
+    dropout: float = 0.0
+    bias: bool = True
+
+# unit testing
+class AttentionUnitTest(unittest.TestCase):
+    def test_self_attention_shape(self):
+        test_input = torch.randn(32, 16, 512) # batch size, seq len, emb size
+        config = TestConfig()
+        self_attention = ROPESelfAttention(config)
+        output = self_attention(test_input, False)
+
+        self.assertTrue(output.shape == test_input.shape)
+
+    def test_cross_attention_shape(self):
+        test_input = torch.randn(32, 16, 512) # test the target sequence
+        test_memory_input = torch.randn(32, 14, 512) # test the memory sequence
+        config = TestConfig() # create the test config
+        
+        cross_attention = ROPECrossAttention(config)
+        output = cross_attention(test_input, test_memory_input)
+
+        self.assertTrue(output.shape == test_input.shape)
+
+if __name__ == "__main__":
+    unittest.main()
     
