@@ -1,4 +1,4 @@
-# RoperFormer
+# Transformer 2
 A quality of life update to the architecture that we know and love! The world of Natural Language Processing is developing at a rampant speed, this simple sequence to sequence model is used to introduce some of the major updates to the transformer architecture.
 
 # Architecture
