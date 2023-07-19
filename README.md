@@ -16,7 +16,7 @@ $$p_{i, 2t} = sin(k/10000^{2t/d}), p_{i, 2t + 1} = cos(k/10000^{2t/d})$$
 
 Su et al.(2021) proposes a multiplicative method instead of an additive one through RoPE by rotating unit representations based on their position within a sequence.
 
-<img src="https://github.com/radia78/Transformer2/blob/main/images/rope_example.png" alt="Original Architecture"/ width="425" height="290">
+<img src="https://github.com/radia78/Transformer2/blob/main/images/rope_example.png" alt="Original Architecture"/ width="425" height="290"/>
 
 The authors find that RoPE slightly outperforms the vanilla transformers in the same machine translation tasks, but also that RoPE handles long sequences better than APE, which makes it optimal for pre-training tasks and long text generation.
 
