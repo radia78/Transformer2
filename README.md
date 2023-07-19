@@ -9,17 +9,31 @@ The original architecture of the transformer from the "Attention is All You Need
 
 ## Updates
 ### RoPE - Rotary Positional Embedding
-One of the biggest updates to the transformer architecture is the use of RoPE to replace the original positional embedding layer (Absolute Positional Embedding - APE). APE additiviely injects the position of each tokens while RoPE imbues the position of each token by rotating the embedding dimension.
+One of the biggest updates to the transformer architecture is the use of RoPE to replace the original positional embedding layer (Absolute Positional Embedding - APE). APE additiviely injects the position of each tokens by creating an vector where each odd and even element are populated by the values below.
 
 $$f_{t \in \{k, q, v\}}(x_i, i) := W_{t \in \{q, k ,v\}}(x_i + p_i)$$
+$$p_{i, 2t} = sin(k/10000^{2t/d}), p_{i, 2t + 1} = cos(k/10000^{2t/d})$$
 
-$$\begin{cases} p_{i, 2t} = sin(k/10000^{2t/d}), p_{i, 2t + 1} = cos(k/10000^{2t/d})\end{cases}$$
-
+Su et al.(2021) proposes a multiplicative method instead of an additive one through RoPE by rotating unit representations based on their position within a sequence.
 
 <img src="https://github.com/radia78/Transformer2/blob/main/images/rope_example.png" alt="Original Architecture"/>
 
+The authors find that RoPE slightly outperforms the vanilla transformers in the same machine translation tasks, but also that RoPE handles long sequences better than APE, which makes it optimal for pre-training tasks and long text generation.
+
 ### GELU - Gaussian Error Linear Unit
-Another update to the transformer architecture is the replacement of ReLUs (Rectified Linear Unit) with GELUs. The GELU differs from the ReLU in a sense that the function is "smoother" near 0, which makes it possible to have gradients in negative ranges.
+Another update to the transformer architecture is the replacement of ReLUs (Rectified Linear Unit) with GELUs. The ReLU replaced sigmoid activation functions in intermediate layers due to its ease of computation and non-vanishing gradients at large $x$ values.
+
+$$ReLU(x) = max(x, 0)$$
+
+However, the ReLU function cannot be differentiated at $x=0$. GeLU fixes this problem by making it differentiable at that point so the network can learn more complex patterns.
+
+$$GeLU(x) = x * \phi (x)$$
+
+Where $\phi(x)$ is the cumulative distribution for the Gaussian distribution with $\mu=1, \sigma^2=0$. However, this is a bit computationally expensive, and so GeLU has always been approximated using to
+
+$$GeLU(x) = 0.5 * x * (1 + Tanh((2/\pi) * (x+0.044715∗x^3)))$$
+
+## Flash Attention
 
 # Training
 TBA
