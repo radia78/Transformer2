@@ -12,7 +12,7 @@ The original architecture of the transformer from the "Attention is All You Need
 One of the biggest updates to the transformer architecture is the use of RoPE to replace the original positional embedding layer (Absolute Positional Embedding - APE). APE additiviely injects the position of each tokens while RoPE imbues the position of each token by rotating the embedding dimension.
 
 $$f_{t \in \{k, q, v\}}(x_i, i) := W_{t \in \{q, k ,v\}}(x_i + p_i)$$
-Where 
+$$\begin{cases} p_{i, 2t} = sin(k/10000^{2t/d}) \\ p_{i, 2t + 1} = cos(k/10000^{2t/d})$$
 
 
 <img src="https://github.com/radia78/Transformer2/blob/main/images/rope_example.png" alt="Original Architecture"/>
