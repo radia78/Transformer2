@@ -29,7 +29,7 @@ However, the ReLU function cannot be differentiated at $x=0$. GeLU fixes this pr
 
 $$GeLU(x) = x * \Phi (x)$$
 
-Where $\Phi(x)$ is the cumulative distribution for the Gaussian distribution with $\mu=1, \sigma^2=0$. However, this is a bit computationally expensive, and so GeLU has always been approximated using to
+Where $\Phi(x)$ is the cumulative distribution for the Gaussian distribution with $\mu=1, \sigma^2=0$. However, this is a bit computationally expensive, and so GeLU has always been approximated to
 
 $$GeLU(x) \approx 0.5 * x * (1 + Tanh((2/\pi) * (x+0.044715∗x^3)))$$
 
