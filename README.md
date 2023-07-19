@@ -27,11 +27,11 @@ $$ReLU(x) = max(x, 0)$$
 
 However, the ReLU function cannot be differentiated at $x=0$. GeLU fixes this problem by making it differentiable at that point so the network can learn more complex patterns.
 
-$$GeLU(x) = x * \phi (x)$$
+$$GeLU(x) = x * \Phi (x)$$
 
 Where $\phi(x)$ is the cumulative distribution for the Gaussian distribution with $\mu=1, \sigma^2=0$. However, this is a bit computationally expensive, and so GeLU has always been approximated using to
 
-$$GeLU(x) = 0.5 * x * (1 + Tanh((2/\pi) * (x+0.044715∗x^3)))$$
+$$GeLU(x) \approx 0.5 * x * (1 + Tanh((2/\pi) * (x+0.044715∗x^3)))$$
 
 ## Flash Attention
 
