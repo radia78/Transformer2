@@ -33,7 +33,7 @@ Where $\Phi(x)$ is the cumulative distribution for the Gaussian distribution wit
 
 $$GeLU(x) \approx 0.5 * x * (1 + Tanh((2/\pi) * (x+0.044715∗x^3)))$$
 
-## Flash Attention
+### Flash Attention
 One of the other updates that comes with PyTorch 2.0 is the introduction of flash-attention. Traditionally, the PyTorch transformers' attentions are calculated using a form of matrix multiplication, however this is computationally expensive and memory hungry. Dao et al.(2022) proposes a IO awareness to the attention mechanism, making the transformers much more efficient than before.
 
 # Training
