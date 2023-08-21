@@ -3,7 +3,7 @@ Radi Akbar
 Personal Project
 
 ## Introduction
-The world of NLP is developing at a rapid space. There has been so many updates to the original Transformer architecture (Vaswani, et al, 2017), that its hard keeping track of all the updates that happened. This project aims to showcase some of the recent developments in the Transformer architecture through tweaking the sequence-to-sequence model and compare the performance of the original architecture against the updated one.
+The world of NLP is developing at a rapid space. There has been so many updates to the original Transformer architecture, that its hard keeping track of all the progress that happened. This project showcases some of the recent developments in the Transformer architecture through tweaking the sequence-to-sequence model and compare its performance on English to German machine translation task.
 
 ## Dependencies
 * Python 3.9.16
@@ -13,11 +13,19 @@ The world of NLP is developing at a rapid space. There has been so many updates 
 
 ## Architectural Updates
 ### Rotary Positional Embedding
+The most popular architectural update is the replacement of the Additive Positional Embedding (APE) with Rotary Positional Embedding (ROPE). While APE injects positional information by adding a positional embedding vector, ROPE rotates the embedding dimension of the by a certain angle to incorporate positional information. You can read more about the specifics of ROPE and APE in Su, et al, 2021.
+
 ### SwiGLU
+Another popular architectural update is the use of SwiGLU. Unlike RELU or GELU, SwiGLU takes in a projected vector in split it into two, afterwards it performs SiLU on the first chunk while multiplying it with the second chunk.
+
 ### RMSNorm
-### Multihead - Attention
+RMSNorm has recently been used more often in LLM papers. While the original LayerNorm seeks to prevent covariance shifts during training, RMSNorm reduces the number of computation by dividing the vector by its standard deviation to ensure invariance in the layer.
 
 ## Training
-### Optimizer
-### Learning Rate Schedule
+### Optimizer and Learning Rate Schedule
+For this project, I follow LLAMA's and GPT Neo X's optimizer setup with $\beta_1 = 0.9, beta_2 = 0.95$ and implement a 0.1 weight decay during training.
+In addition, I follow their cosine learning rate decay schedule with linear warmup as it's been use lately for training decoder-only and encoder-decoder architectures.
+
+### Steps and Gradient Accumulation
+Due to resource limitations, I cannot squeeze original paper's number of batches, instead I use a batch size of 4 and implement gradient accumulation with a step of 32, which simulates having a batch size of 128. 
 ### Configuration
