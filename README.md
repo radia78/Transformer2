@@ -27,5 +27,7 @@ For this project, I follow LLAMA's and GPT Neo X's optimizer setup with $\beta_1
 In addition, I follow their cosine learning rate decay schedule with linear warmup as it's been use lately for training decoder-only and encoder-decoder architectures.
 
 ### Steps and Gradient Accumulation
-Due to resource limitations, I cannot squeeze original paper's number of batches, instead I use a batch size of 4 and implement gradient accumulation with a step of 32, which simulates having a batch size of 128. 
+Due to resource limitations, I cannot squeeze original paper's number of batches, instead I use a batch size of 4 and implement gradient accumulation with a step of 32, which simulates having a batch size of 128. It's been known that larger batch sizes help the model converge and gradient accumulation is the poorman's solution to the problem. Overall, I trained my model for roughly ~3 million steps, but because I update the gradient only every 32 step, the effective number of steps per epoch is roughly ~35k.
+
 ### Configuration
+TBD - But I'm thinking of renting a cluster of GPUs from Lambda Labs and train my model across nodes. Since I can't get a setup similar to the original "Attention is All You Need" paper, I've decided to just train it for longer but on a smaller setup.
