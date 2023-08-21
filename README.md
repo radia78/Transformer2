@@ -1,6 +1,5 @@
 # Transformer 2
-Radi Akbar
-
+Radi Akbar\
 Personal Project
 
 ## Introduction
