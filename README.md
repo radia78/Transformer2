@@ -16,9 +16,21 @@ The third update is replacing the ReLU activation function with SwiGLU. It's bee
 ### Training Setup
 I follow LLAMA's and GPT Neo-X's training setup by using an AdamW optimizer with $\beta_1 = 0.9, \beta_2 = 0.95$ and a weight decay of 0.1. In addition, I follow their cosine learning rate decay schedule as its recently been used more often for training Encoder-Decoder and Decoder-Only architectures. <br>
 
-Due to resource limitations, 
+It's been shown on various papers that training on larger batch sizes help the model converge faster, but due to resource limitations I only train the model on batch size of 8. To address this problem, I used gradient accumulation so that the model only update its gradient every 32 step to simulate a batch size of 256. <br> 
 
-## Data & Tokenizer Preparation
+According to this Medium Article, the original paper trains the model on 16 epochs with a batch size of 724. Since there's roughly 4.5m rows in the training dataset, that means it ran through approximately 6.2k steps per epoch and totaling to 100k steps. Due to my resource limitations, I'm only training my model for 80k steps, which approximates to running the model for 13 epochs. 
+
+## Usage
+### Dataset Preparation
+To prepare the data I downloaded Stanford's WMT14 Dataset from [here](https://nlp.stanford.edu/projects/nmt/) and performed some text cleaning like converting "##UNDERSCORE##" to "_". Afterwards, I conver the dataset into a map style dataset and push it to Huggingface Hub. To use the dataset, use the following line of code:
+```
+from datasets import load_dataset
+data = load_dataset('radia/wmt14-de2en')
+```
+The full dataset can be viewed in my HuggingFace page [here](https://huggingface.co/)
+
+### Tokenizer Preparation
+To prepare the tokenizer, I train a hugging face model using my cleaned dataset. I made sure that the vocabulary size of the tokenizer is consistent with the one from the paper (roughly 37k tokens between German)
 ## Training the Model
 ## Performance Evaluation
 ### BLEU Score
