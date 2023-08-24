@@ -22,7 +22,7 @@ According to this Medium Article, the original paper trains the model on 16 epoc
 
 ## Usage
 ### Dataset Preparation
-To prepare the data I downloaded Stanford's WMT14 Dataset from [here](https://nlp.stanford.edu/projects/nmt/) and performed some text cleaning like converting "##UNDERSCORE##" to "_". Afterwards, I conver the dataset into a map style dataset and push it to Huggingface Hub. To use the dataset, use the following line of code:
+To prepare the data I downloaded Stanford's WMT14 Dataset from [here](https://nlp.stanford.edu/projects/nmt/) and performed some text cleaning like converting "##UNDERSCORE##" to "_". Afterwards, I convert the dataset into a map style dataset and push it to Huggingface Hub. To use the dataset, use the following line of code:
 ```
 from datasets import load_dataset
 data = load_dataset('radia/wmt14-de2en')
@@ -30,7 +30,11 @@ data = load_dataset('radia/wmt14-de2en')
 The full dataset can be viewed in my HuggingFace page [here](https://huggingface.co/)
 
 ### Tokenizer Preparation
-To prepare the tokenizer, I train a hugging face model using my cleaned dataset. I made sure that the vocabulary size of the tokenizer is consistent with the one from the paper (roughly 37k tokens between German)
+To prepare the tokenizer, I train a BPE tokenizer using my cleaned dataset. I made sure that the vocabulary size of the tokenizer is consistent with the one from the paper (roughly 37k tokens between German). To train the tokenizer, run the following code on your terminal:
+'''
+python3 prepare_tokenizers.py
+'''
+
 ## Training the Model
 ## Performance Evaluation
 ### BLEU Score
