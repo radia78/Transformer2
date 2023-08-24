@@ -5,7 +5,7 @@ Personal Project
 ## Introduction
 The world of NLP is developing at a rapid space. There has been so many updates to the original Transformer architecture, that its hard keeping track of all the progress that happened. This project showcases some of the recent developments in the Transformer architecture through tweaking the sequence-to-sequence model and compare its performance on English to German machine translation task
 
-## Training Specification
+## Training Specifications
 ### Architecture
 The architecture of the model remains the same from Vaswani, et al, 2017 but with a few modifications. First update is replacing the Additional Positional Embedding (APE) with Rotary Positional Embedding (ROPE) from Su, et al, 2021. ROPE rotates the embedded sequences to inject positional information instead of adding it. It's been shown that ROPE can hold long-term dependency between words in huge context windows. <br>
 
@@ -37,4 +37,10 @@ python3 prepare_tokenizers.py
 
 ## Training the Model
 ## Performance Evaluation
-### BLEU Score
+## References
+- https://arxiv.org/abs/2302.13971
+- https://arxiv.org/abs/1910.07467
+- https://arxiv.org/abs/2104.09864
+- https://arxiv.org/abs/2002.05202v1
+- https://arxiv.org/abs/2210.02414
+- https://github.com/karpathy/nanoGPT/blob/master/model.py
