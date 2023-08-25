@@ -12,8 +12,6 @@ RMS Norm implementation from https://github.com/bzhangGo/rmsnorm/blob/master/rms
 ROPE implementation from https://blog.eleuther.ai/rotary-embeddings/
 """
 
-logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s", level=logging.INFO, datefmt="%I:%M:%S")
-
 class Rotary(torch.nn.Module):
     def __init__(self, dim, base=10000):
         super().__init__()
@@ -230,6 +228,9 @@ class Transformer(nn.Module):
         self.lm_head = nn.Linear(config.n_emb, config.vocab_size)
         self.transformer.src_wte.weight = self.lm_head.weight # https://paperswithcode.com/method/weight-tying
         self.transformer.tgt_wte.weight = self.lm_head.weight
+
+        # init all weights
+        self.apply(self._init_weights)
 
         print("number of parameters: %.2fM" % (self.get_num_params_()/1e6,))
 

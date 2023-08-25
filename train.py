@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from model.transformer import *
+from model import *
 
 # import the huggingface dataset and tokenizer - pretrained
 from datasets import load_dataset
@@ -112,12 +112,12 @@ if __name__ == "__main__":
     args.dropout = 0.1
     # training config arguments
     args.run_name = "TransformerV2"
-    args.batch_size = 4
+    args.batch_size = 8
     args.weight_decay = 0.1
     args.lr = 6e-4
     args.betas = (0.9, 0.95)
     args.warmup_iters = 2e3
-    args.lr_decay_iters = 3e6
+    args.lr_decay_iters = 23e4
     args.min_lr = 6e-5
     args.grad_accumulation_steps = 32
 
