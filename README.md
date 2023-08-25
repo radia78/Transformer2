@@ -19,7 +19,7 @@ The architecture of the model remains the same from the original [[1]](#1) but w
 The second update is replacing LayerNorm with RMSNorm [[2]](#2). LayerNorm addresses the problem of covariance shifts during training by standardizing the inputs by its mean and standard deviation. RMSNorm simplifies the normalization process by only dividing the input by its standard deviation. <br>
 
 **RMS Norm Equation**
-$$\bar{a_i}=\frac{a_i}{RMS(a)}g_i, \text{where } RMS(a) = \sqrt{\frac{1}{n}\sum{i=1}{n}a_i^{2}}.$$
+$$\bar{a_i}=\frac{a_i}{RMS(a)}g_i, \text{where } RMS(a) = \sqrt{\frac{1}{n}\sum_{i=1}^{n}a_i^{2}}.$$
 
 The third update is replacing the ReLU activation function with SwiGLU [[3]](#3). It's been shown that SwiGLU improves the performance of NLP tasks. The paper also specifies that to make computation less expensive, they change the hidden size of the MLP component by multiplying it with 2/3.
 
