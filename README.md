@@ -39,13 +39,21 @@ python3 prepare_tokenizers.py
 ## Performance Evaluation
 ## References
 <a id="1">[1]</a> 
-[1] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob
+[Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob
 Uszkoreit, Llion Jones, Aidan N Gomez, Ł ukasz
 Kaiser, and Illia Polosukhin. 2017. Attention is all
-you need. In Advances in Neural Information Processing Systems 30, pages 5998–6008.
-- https://arxiv.org/abs/2302.13971
-- https://arxiv.org/abs/1910.07467
-- https://arxiv.org/abs/2104.09864
-- https://arxiv.org/abs/2002.05202v1
-- https://arxiv.org/abs/2210.02414
+you need.](https://arxiv.org/abs/1706.03762)
+
+[Biao Zhang and Rico Sennrich. 2019. Root mean
+square layer normalization.](https://arxiv.org/abs/1910.07467)
+
+[Noam Shazeer. 2020. Glu variants improve transformer.](https://arxiv.org/abs/2002.05202)
+
+[Jianlin Su, Yu Lu, Shengfeng Pan, Ahmed Murtadha,
+Bo Wen, and Yunfeng Liu. 2021. Roformer: Enhanced transformer with rotary position embedding.](https://arxiv.org/abs/2104.09864)
+
+[Zhengxiao Du, Yujie Qian, Xiao Liu, Ming Ding, Jiezhong Qiu, Zhilin Yang, and Jie Tang. 2021. GLM: General Language Model Pretraining with Autoregressive Blank Infilling.](https://arxiv.org/abs/2210.02414)
+
+[Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, Marie-Anne Lachaux, Timothée Lacroix, Baptiste Rozière, Naman Goyal, Eric Hambro, Faisal Azhar, Aurelien Rodriguez, Armand Joulin, Edouard Grave, and Guillaume Lample. 2023. LLaMA: Open and Efficient Foundation Language Models.](https://arxiv.org/abs/2302.13971)
+
 - https://github.com/karpathy/nanoGPT/blob/master/model.py
