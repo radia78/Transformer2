@@ -38,7 +38,7 @@ python3 prepare_tokenizers.py
 ## Training the Model
 ## Performance Evaluation
 ## References
-- https://arxiv.org/abs/2302.13971
+[1]: https://arxiv.org/abs/2302.13971
 - https://arxiv.org/abs/1910.07467
 - https://arxiv.org/abs/2104.09864
 - https://arxiv.org/abs/2002.05202v1
