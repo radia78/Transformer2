@@ -4,8 +4,9 @@ Personal Project
 
 ## Introduction
 The world of NLP is developing at a rapid space. There has been so many updates to the original Transformer architecture, that its hard keeping track of all the progress that happened. This project showcases some of the recent developments in the Transformer architecture through tweaking the sequence-to-sequence model and compare its performance on English to German machine translation task.
-
-<img src="images/transformer_architecture.png"/>
+<p align="center">
+  <img src="images/transformer_architecture.png" title="Original Transformer Architecture"/>
+</p>
 
 ## Training Specifications
 ### Architecture
