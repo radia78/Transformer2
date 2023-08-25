@@ -38,7 +38,12 @@ python3 prepare_tokenizers.py
 ## Training the Model
 ## Performance Evaluation
 ## References
-[1]: https://arxiv.org/abs/2302.13971
+<a id="1">[1]</a> 
+[1] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob
+Uszkoreit, Llion Jones, Aidan N Gomez, Ł ukasz
+Kaiser, and Illia Polosukhin. 2017. Attention is all
+you need. In Advances in Neural Information Processing Systems 30, pages 5998–6008.
+- https://arxiv.org/abs/2302.13971
 - https://arxiv.org/abs/1910.07467
 - https://arxiv.org/abs/2104.09864
 - https://arxiv.org/abs/2002.05202v1
