@@ -24,7 +24,7 @@ $$\bar{a_i}=\frac{a_i}{RMS(a)}g_i, \text{where } RMS(a) = \sqrt{\frac{1}{n}\sum{
 The third update is replacing the ReLU activation function with SwiGLU [[3]](#3). It's been shown that SwiGLU improves the performance of NLP tasks. The paper also specifies that to make computation less expensive, they change the hidden size of the MLP component by multiplying it with 2/3.
 
 **SwiGLU**
-$$SwiGLU(x, W, V, b, c, \beta) = Swish_{\beta}(xW + b) \bigotimes (xV + c)$$
+$$SwiGLU(x, W, V, b, c, \beta) = Swish_{\beta}(xW + b) \otimes (xV + c)$$
 
 ### Training Setup
 I follow LLAMA's and GPT Neo-X's training setup by using an AdamW optimizer with $\beta_1 = 0.9, \beta_2 = 0.95$ and a weight decay of 0.1 [[6]](#6)[[7]](#7). In addition, I follow their cosine learning rate decay schedule as its recently been used more often for training Encoder-Decoder and Decoder-Only architectures. <br>
@@ -44,9 +44,9 @@ The full dataset can be viewed in my HuggingFace page [here](https://huggingface
 
 ### Tokenizer Preparation
 To prepare the tokenizer, I train a BPE tokenizer using my cleaned dataset. I made sure that the vocabulary size of the tokenizer is consistent with the one from the paper (roughly 37k tokens between German). To train the tokenizer, run the following code on your terminal:
-'''
+```
 python3 prepare_tokenizers.py
-'''
+```
 
 ## Training the Model
 ## Performance Evaluation
