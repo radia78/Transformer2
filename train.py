@@ -12,10 +12,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from model import *
 
-# import the huggingface dataset and tokenizer - pretrained
-from datasets import load_dataset
-from transformers import PreTrainedTokenizerFast
-
 # import distributed learning stuff
 import torch.multiprocessing
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -35,8 +31,10 @@ def create_model(args):
         vocab_size=args.vocab_size,
         dropout=args.dropout
     )
-    model = Transformer(model_config)
-    model = DDP(model, device_ids=[LOCAL_RANK]) # send the model across GPU/nodes
+    model = Transformer(model_config).to(LOCAL_RANK)
+    if hasattr(torch, 'compile'):
+        model = torch.compile(model)
+    model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK) # send the model across GPU/nodes
     return model
 
 def train(args):
@@ -64,8 +62,9 @@ def train(args):
     model.train() # turn on the training mode for the model
 
     for epoch in range(args.epochs):
-        logging.info(f"Starting epoch {epoch + 1}:")
+        logging.info(f"Starting epoch {epoch + 1} on GPU {LOCAL_RANK}:")
         dataloader.sampler.set_epoch(epoch) # setting the shuffler for each GPU
+        print(f"Epoch {epoch + 1} on GPU {LOCAL_RANK}: ")
         pbar = tqdm(dataloader)
         for i, (src, tgt) in enumerate(pbar):
             # send both to the GPU
@@ -74,10 +73,10 @@ def train(args):
 
             # compute the prediction and calculate the loss
             output = model(src, tgt)
-            loss = criterion(output.view(-1, output.size(-1)), tgt.view(-1)) // args.grad_accumulation_steps
+            loss = criterion(output.view(-1, output.size(-1)), tgt.view(-1)) / args.grad_accumulation_steps
             loss.backward()
             # clip the gradient so it doesn't explode or vanish
-            nn.utils.clip_grad(model.parameters(), 1.0)
+            nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
             # we implement gradient accumulation - we collect gradient for i samples and then perform the backward pass
             if ((i + 1) % args.grad_accumulation_steps == 0) or ((i + 1) == l):
@@ -110,7 +109,9 @@ if __name__ == "__main__":
     args.max_len = 512
     args.vocab_size = 37467
     args.dropout = 0.1
+
     # training config arguments
+    args.epochs = 13
     args.run_name = "TransformerV2"
     args.batch_size = 8
     args.weight_decay = 0.1
@@ -120,5 +121,6 @@ if __name__ == "__main__":
     args.lr_decay_iters = 23e4
     args.min_lr = 6e-5
     args.grad_accumulation_steps = 32
+    args.backend='nccl'
 
     main(args)

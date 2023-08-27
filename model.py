@@ -159,7 +159,7 @@ class MultiHeadAttention(nn.Module):
             if self.causal:
                  att = att.masked_fill(self.bias[:,:,:n,:n] == 0, float('-inf'))
             att = self.attn_dropout(F.softmax(att, dim=-1))
-            y = torch.einsum("b h i j, b h j d, -> b h i d", att, v) # (B, nh, T, S) x (B, nh, S, hs) -> (B, nh, T, hs)
+            y = torch.einsum("b h i j, b h j d -> b h i d", att, v) # (B, nh, T, S) x (B, nh, S, hs) -> (B, nh, T, hs)
             y = rearrange(y, "b h i d -> b i (h d)")
 
         return self.attn_out(y)
@@ -230,7 +230,7 @@ class Transformer(nn.Module):
         self.transformer.tgt_wte.weight = self.lm_head.weight
 
         # init all weights
-        self.apply(self._init_weights)
+        self.apply(self._init_weights_)
 
         print("number of parameters: %.2fM" % (self.get_num_params_()/1e6,))
 
