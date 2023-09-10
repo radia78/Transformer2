@@ -33,7 +33,7 @@ def create_model(args):
     )
     model = Transformer(model_config).to(LOCAL_RANK)
     if hasattr(torch, 'compile'):
-        model = torch.compile(model)
+        model = torch.compile(model, dynamic=True)
     model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK) # send the model across GPU/nodes
     return model
 
@@ -49,7 +49,7 @@ def train(args):
     # configure the cosine learning rate decay schedule
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer=optimizer,
-        lr_lambda=lambda it: get_lr(it, args.warmup_iters, args.lr, args.lr_decay_iters, args.min_lr)
+        lr_lambda=lambda it: lr_schedule(it, args.lr, args.warmup_iters, args.lr_decay_iters)
     )
 
     # configure the loss function
@@ -81,11 +81,10 @@ def train(args):
             # we implement gradient accumulation - we collect gradient for i samples and then perform the backward pass
             if ((i + 1) % args.grad_accumulation_steps == 0) or ((i + 1) == l):
                 optimizer.step()
+                scheduler.step()
                 optimizer.zero_grad(set_to_none=True)
             
-            scheduler.step()
-            
-            # update the progress bar
+            # update the progress bar   
             pbar.set_postfix(Loss=loss.item())
             logger.add_scalar("Loss", loss.item(), global_step=epoch * l + i)
     
@@ -111,15 +110,14 @@ if __name__ == "__main__":
     args.dropout = 0.1
 
     # training config arguments
-    args.epochs = 13
+    args.epochs = 16
     args.run_name = "TransformerV2"
-    args.batch_size = 8
-    args.weight_decay = 0.1
-    args.lr = 6e-4
-    args.betas = (0.9, 0.95)
-    args.warmup_iters = 2e3
-    args.lr_decay_iters = 23e4
-    args.min_lr = 6e-5
+    args.batch_size = 32
+    args.weight_decay = 0.01
+    args.lr = 5e-4
+    args.betas = (0.9, 0.98)
+    args.warmup_iters = 4e3
+    args.lr_decay_iters = 7e5
     args.grad_accumulation_steps = 32
     args.backend='nccl'
 
