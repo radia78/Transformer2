@@ -12,36 +12,24 @@ RMS Norm implementation from https://github.com/bzhangGo/rmsnorm/blob/master/rms
 ROPE implementation from https://blog.eleuther.ai/rotary-embeddings/
 """
 
-class Rotary(torch.nn.Module):
-    def __init__(self, dim, base=10000):
+class RotaryEmbedding(nn.Module):
+    def __init__(self, dim):
         super().__init__()
-        inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float() / dim))
+        inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2).float() / dim))
         self.register_buffer("inv_freq", inv_freq)
-        self.seq_len_cached = None
-        self.cos_cached = None
-        self.sin_cached = None
 
-    def forward(self, n, device):
-        seq_len = n
-        if seq_len != self.seq_len_cached:
-            self.seq_len_cached = seq_len
-            t = torch.arange(n, device=device).type_as(self.inv_freq)
-            freqs = torch.einsum("i,j->ij", t, self.inv_freq)
-            emb = torch.cat((freqs, freqs), dim=-1).to(device)
-            self.cos_cached = emb.cos()[None, None, :, :]
-            self.sin_cached = emb.sin()[None, None, :, :]
-        return self.cos_cached, self.sin_cached
+    def forward(self, max_seq_len, *, device):
+        seq = torch.arange(max_seq_len, device=device, dtype=self.inv_freq.dtype)
+        freqs = torch.einsum("i , j -> i j", seq, self.inv_freq)
+        return torch.cat((freqs, freqs), dim=-1)
 
-
-# rotary pos emb helpers:
 def rotate_half(x):
-    x1, x2 = x[..., : x.shape[-1] // 2], x[..., x.shape[-1] // 2 :]
+    x = rearrange(x, "... (j d) -> ... j d", j=2)
+    x1, x2 = x.unbind(dim=-2)
     return torch.cat((-x2, x1), dim=-1)
 
-
-@torch.jit.script
-def apply_rotary_pos_emb(x, cos, sin):
-    return (x * cos) + (rotate_half(x) * sin)
+def apply_rotary_pos_emb(pos, t, n):
+    return (t * pos.cos()[None, None, :n, :]) + (rotate_half(t) * pos.sin()[None, None, :n, :])
 
 # Biao Zhang's implementation of RMS Norm
 class RMSNorm(nn.Module):
@@ -94,17 +82,22 @@ class SwiGLU(nn.Module):
         return F.silu(gate) * x
 
 # implement the self attention mechanism for rotated embeddings
-class MultiHeadAttention(nn.Module):
+class MultiQueryAttention(nn.Module):
     def __init__(self, config, causal=False):
-        super(MultiHeadAttention, self).__init__()
+        super(MultiQueryAttention, self).__init__()
         # cache the dimension of the fused parallel attention
         self.n_emb = config.n_emb
         self.n_head = config.n_head
+        self.head_dim = config.n_emb // config.n_head
+        self.max_len = config.max_len
 
         # create the projection layers
-        self.fused_kv_proj = nn.Linear(config.n_emb, 2 * config.n_emb, bias=False)
+        self.fused_kv_proj = nn.Linear(config.n_emb, 2 * self.head_dim, bias=False)
         self.q_proj = nn.Linear(config.n_emb, config.n_emb, bias=False)
         self.attn_out = nn.Linear(config.n_emb, config.n_emb) # output projection
+
+        self.scale = config.n_emb ** -0.5
+        self.rotary_emb = RotaryEmbedding(self.head_dim)
 
         # regularization
         self.dropout = config.dropout
@@ -113,18 +106,24 @@ class MultiHeadAttention(nn.Module):
 
         # save the booleans
         self.causal=causal
+        self.register_buffer("pos_emb", None, persistent=False)
         self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention')
 
         # create the mask if flash attention ain't available
         if not self.flash:
             print("WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0")
-            # causal mask to ensure that attention is only applied to the left in the input sequence
-            self.register_buffer("bias", torch.tril(torch.ones(config.max_len, config.max_len))
-                                        .view(1, 1, config.max_len, config.max_len))
+
+            if self.causal:
+                # causal mask to ensure that attention is only applied to the left in the input sequence
+                self.register_buffer("bias", torch.tril(torch.ones(config.max_len, config.max_len)).view(1, 1, config.max_len, config.max_len))
             
-    def pos_encoding(self, x):
-        cos, sin = Rotary(self.n_emb // self.n_head)(x.shape[2], x.device)
-        return apply_rotary_pos_emb(x, cos, sin)
+    def get_rotary_embedding(self, n, device):
+        if self.pos_emb is not None and self.pos_emb.shape[-2] >= n:
+            return self.pos_emb[:n]
+
+        pos_emb = self.rotary_emb(n, device=device)
+        self.register_buffer("pos_emb", pos_emb, persistent=False)
+        return pos_emb
 
     def forward(self, x, m=None):
         """
@@ -133,20 +132,18 @@ class MultiHeadAttention(nn.Module):
         n, i, j - sequence_lengths
         d - feature dimension
         """
-        n, h = x.shape[1], self.n_head
+        n, head_dim, device = x.shape[1], self.head_dim, x.device
         if m is None: # just in case there's cross - attention
             m = x
 
         # calculate q, k, v
-        k, v = self.fused_kv_proj(m).split(self.n_emb, dim=-1)
+        k, v = self.fused_kv_proj(m).split(self.head_dim, dim=-1)
         q = self.q_proj(x)
-        q = rearrange(q, "b i (h d) -> b h i d", h=h)
-        k = rearrange(k, "b j (h d) -> b h j d", h=h)
-        v = rearrange(v, "b j (h d) -> b h j d", h=h)
+        q, k, v = map(lambda t: rearrange(t, "b i (h d) -> b h i d", d=head_dim), (q, k, v))
 
         # applying the rotary positional embedding to Q and K
-        q = self.pos_encoding(q)
-        k = self.pos_encoding(k)
+        positions = self.get_rotary_embedding(self.max_len, device)
+        q, k = map(lambda t: apply_rotary_pos_emb(positions, t, t.shape[-2]), (q, k))
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, S) -> (B, nh, T, S)
         if self.flash: # flash attention go brrrrrrrrrr
@@ -154,12 +151,13 @@ class MultiHeadAttention(nn.Module):
             y = torch.nn.functional.scaled_dot_product_attention(
                 q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=self.causal)
             y = rearrange(y, "b h i d -> b i (h d)")
+
         else:
-            att = torch.einsum("b h i d, b h j d -> b h i j", q, k) * (1.0 / math.sqrt(k.size(-1)))
+            att = torch.einsum("b h i d, b j d -> b h i j", q, k) * self.scale
             if self.causal:
                  att = att.masked_fill(self.bias[:,:,:n,:n] == 0, float('-inf'))
             att = self.attn_dropout(F.softmax(att, dim=-1))
-            y = torch.einsum("b h i j, b h j d -> b h i d", att, v) # (B, nh, T, S) x (B, nh, S, hs) -> (B, nh, T, hs)
+            y = torch.einsum("b h i j, b j d -> b h i d", att, v) # (B, nh, T, S) x (B, nh, S, hs) -> (B, nh, T, hs)
             y = rearrange(y, "b h i d -> b i (h d)")
 
         return self.attn_out(y)
@@ -184,7 +182,7 @@ class EncoderBlock(nn.Module):
     def __init__(self, config):
         super(EncoderBlock, self).__init__()
         self.ln_1 = RMSNorm(config.n_emb)
-        self.attn = MultiHeadAttention(config)
+        self.attn = MultiQueryAttention(config)
         self.ln_2 = RMSNorm(config.n_emb)
         self.mlp = MLP(config)
 
@@ -197,9 +195,9 @@ class DecoderBlock(nn.Module):
     def __init__(self, config):
         super(DecoderBlock, self).__init__()
         self.ln_1 = RMSNorm(config.n_emb)
-        self.attn1 = MultiHeadAttention(config, causal=True)
+        self.attn1 = MultiQueryAttention(config, causal=True)
         self.ln_2 = RMSNorm(config.n_emb)
-        self.attn2 = MultiHeadAttention(config)
+        self.attn2 = MultiQueryAttention(config)
         self.ln_3 = RMSNorm(config.n_emb)
         self.mlp = MLP(config)
     
