@@ -153,11 +153,11 @@ class MultiQueryAttention(nn.Module):
             y = rearrange(y, "b h i d -> b i (h d)")
 
         else:
-            att = torch.einsum("b h i d, b h j d -> b h i j", q, k.squeeze(1)) * self.scale
+            att = torch.einsum("b h i d, b j d -> b h i j", q, k.squeeze(1)) * self.scale
             if self.causal:
                  att = att.masked_fill(self.bias[:,:,:n,:n] == 0, float('-inf'))
             att = self.attn_dropout(F.softmax(att, dim=-1))
-            y = torch.einsum("b h i j, b h j d -> b h i d", att, v.squeeze(1)) # (B, nh, T, S) x (B, nh, S, hs) -> (B, nh, T, hs)
+            y = torch.einsum("b h i j, b j d -> b h i d", att, v.squeeze(1)) # (B, nh, T, S) x (B, nh, S, hs) -> (B, nh, T, hs)
             y = rearrange(y, "b h i d -> b i (h d)")
 
         return self.attn_out(y)
