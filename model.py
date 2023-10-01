@@ -153,11 +153,11 @@ class MultiQueryAttention(nn.Module):
             y = rearrange(y, "b h i d -> b i (h d)")
 
         else:
-            att = torch.einsum("b h i d, b j d -> b h i j", q, k) * self.scale
+            att = torch.einsum("b h i d, b h j d -> b h i j", q, k.squeeze(1)) * self.scale
             if self.causal:
                  att = att.masked_fill(self.bias[:,:,:n,:n] == 0, float('-inf'))
             att = self.attn_dropout(F.softmax(att, dim=-1))
-            y = torch.einsum("b h i j, b j d -> b h i d", att, v) # (B, nh, T, S) x (B, nh, S, hs) -> (B, nh, T, hs)
+            y = torch.einsum("b h i j, b h j d -> b h i d", att, v.squeeze(1)) # (B, nh, T, S) x (B, nh, S, hs) -> (B, nh, T, hs)
             y = rearrange(y, "b h i d -> b i (h d)")
 
         return self.attn_out(y)
@@ -182,12 +182,13 @@ class EncoderBlock(nn.Module):
     def __init__(self, config):
         super(EncoderBlock, self).__init__()
         self.ln_1 = RMSNorm(config.n_emb)
-        self.attn = MultiQueryAttention(config)
+        self.attn = nn.MultiheadAttention(config.n_emb, config.n_head, config.dropout, False, batch_first=True)
         self.ln_2 = RMSNorm(config.n_emb)
         self.mlp = MLP(config)
 
     def forward(self, x):
-        x = x + self.attn(self.ln_1(x))
+        x_temp = self.ln_1(x)
+        x = x + self.attn(x_temp, x_temp, x_temp)[0]
         x = x + self.mlp(self.ln_2(x))
         return x
     
