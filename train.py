@@ -77,13 +77,13 @@ def train(args):
                 loss = criterion(output.view(-1, output.size(-1)), tgt.view(-1)) / args.grad_accumulation_steps
             # scale the loss
             scaler.scale(loss).backward()
-            # unscale the optimizer for gradient clipping
-            scaler.unscale_(optimizer)
-            # clip the gradient so it doesn't explode or vanish
-            nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
             # we implement gradient accumulation - we collect gradient for i samples and then perform the backward pass
             if ((i + 1) % args.grad_accumulation_steps == 0) or ((i + 1) == l):
+                # unscale the optimizer for gradient clipping
+                scaler.unscale_(optimizer)
+                # clip the gradient so it doesn't explode or vanish
+                nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 scaler.step(optimizer)
                 scaler.update()
                 scheduler.step()
