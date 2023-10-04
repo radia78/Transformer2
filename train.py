@@ -42,6 +42,7 @@ def train(args):
     setup_logging(args.run_name)
     dataloader = get_data(args.batch_size)
     model = create_model(args)
+    scaler = torch.cuda.amp.GradScaler()
 
     # configure the optimizer
     optimizer = configure_optimizer(model, args.weight_decay, args.lr, args.betas, 'cuda')
@@ -72,15 +73,21 @@ def train(args):
             tgt = tgt.to(LOCAL_RANK)
 
             # compute the prediction and calculate the loss
-            output = model(src, tgt)
-            loss = criterion(output.view(-1, output.size(-1)), tgt.view(-1)) / args.grad_accumulation_steps
-            loss.backward()
+            # use auto mixed precision
+            with torch.amp.autocast(device_type='cuda', dtype=torch.float16):
+                output = model(src, tgt)
+                loss = criterion(output.view(-1, output.size(-1)), tgt.view(-1)) / args.grad_accumulation_steps
+            # scale the loss
+            scaler.scale(loss).backward()
+            # unscale the optimizer for gradient clipping
+            scaler.unscale_(optimizer)
             # clip the gradient so it doesn't explode or vanish
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
             # we implement gradient accumulation - we collect gradient for i samples and then perform the backward pass
             if ((i + 1) % args.grad_accumulation_steps == 0) or ((i + 1) == l):
-                optimizer.step()
+                scaler.step(optimizer)
+                scaler.update()
                 scheduler.step()
                 optimizer.zero_grad(set_to_none=True)
             
@@ -117,7 +124,7 @@ if __name__ == "__main__":
     args.lr = 5e-4
     args.betas = (0.9, 0.98)
     args.warmup_iters = 4e3
-    args.lr_decay_iters = 7e5
+    args.lr_decay_iters = 73000
     args.grad_accumulation_steps = 32
     args.backend='nccl'
 
