@@ -117,13 +117,13 @@ if __name__ == "__main__":
     # training config arguments
     args.epochs = 16
     args.run_name = "TransformerV2"
-    args.batch_size = 32
+    args.batch_size = 128
     args.weight_decay = 0.01
-    args.lr = 5e-4
+    args.lr = 1e-4
     args.betas = (0.9, 0.98)
-    args.warmup_iters = 4e3
-    args.lr_decay_iters = 73000
-    args.grad_accumulation_steps = 32
+    args.warmup_iters = 3e4
+    args.lr_decay_iters = 3e5
+    args.grad_accumulation_steps = 2
     args.backend='nccl'
 
     main(args)
