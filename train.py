@@ -43,7 +43,7 @@ def train(args):
     scaler = torch.cuda.amp.GradScaler()
 
     # configure the optimizer
-    optimizer = configure_optimizer(model, args.weight_decay, args.lr, args.betas, 'cuda')
+    optimizer = configure_optimizer(model, args.weight_decay, args.lr, args.betas, args.eps, 'cuda')
 
     # configure the cosine learning rate decay schedule
     scheduler = torch.optim.lr_scheduler.LambdaLR(
@@ -117,13 +117,14 @@ if __name__ == "__main__":
     # training config arguments
     args.epochs = 16
     args.run_name = "TransformerV2"
-    args.batch_size = 128
+    args.batch_size = 32
     args.weight_decay = 0.01
     args.lr = 1e-4
     args.betas = (0.9, 0.98)
+    args.eps = 1e-4
     args.warmup_iters = 3e4
     args.lr_decay_iters = 3e5
-    args.grad_accumulation_steps = 2
+    args.grad_accumulation_steps = 8
     args.backend='nccl'
 
     main(args)
