@@ -61,7 +61,7 @@ def lr_schedule(step, lr, warmup_steps, decay_steps):
         return lr - step * decay_coefficient
 
 # function to implement weight decay to only parameters that have a higher dimension
-def configure_optimizer(model, weight_decay, learning_rate, betas, device_type):
+def configure_optimizer(model, weight_decay, learning_rate, betas, eps, device_type):
         # start with all of the candidate parameters
         param_dict = {pn: p for pn, p in model.named_parameters()}
         # filter out those that do not require grad
@@ -82,7 +82,7 @@ def configure_optimizer(model, weight_decay, learning_rate, betas, device_type):
         fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
         use_fused = fused_available and device_type == 'cuda'
         extra_args = dict(fused=True) if use_fused else dict()
-        optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=betas, **extra_args)
+        optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=betas, eps=eps, **extra_args)
         print(f"using fused AdamW: {use_fused}")
         return optimizer
 
