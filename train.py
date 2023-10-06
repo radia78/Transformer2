@@ -36,6 +36,13 @@ def create_model(args):
     return model
 
 def train(args):
+    # setup torch training computational stuff
+    torch.manual_seed(args.seed)
+    torch.backends.cuda.matmul.allow_tf32 = True # allowing some full precision calculation
+    torch.backends.cudnn.allow_tf32 = True
+    ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[args.dtype]
+    ctx = torch.amp.autocast(device_type='cuda', dtype=ptdtype)
+
     # setup the training by obtaining the necessary ingredients
     setup_logging(args.run_name)
     dataloader = get_data(args.batch_size)
@@ -66,28 +73,28 @@ def train(args):
         print(f"Epoch {epoch + 1} on GPU {LOCAL_RANK}: ")
         pbar = tqdm(dataloader)
         for i, (src, tgt) in enumerate(pbar):
+            # reset the gradients
+            optimizer.zero_grad(set_to_none=True)
+
             # send both to the GPU
             src = src.to(LOCAL_RANK)
             tgt = tgt.to(LOCAL_RANK)
 
             # compute the prediction and calculate the loss
             # use auto mixed precision
-            with torch.amp.autocast(device_type='cuda', dtype=torch.float16):
+            with ctx:
                 output = model(src, tgt)
                 loss = criterion(output.view(-1, output.size(-1)), tgt.view(-1)) / args.grad_accumulation_steps
             # scale the loss
             scaler.scale(loss).backward()
 
-            # we implement gradient accumulation - we collect gradient for i samples and then perform the backward pass
-            if ((i + 1) % args.grad_accumulation_steps == 0) or ((i + 1) == l):
-                # unscale the optimizer for gradient clipping
-                scaler.unscale_(optimizer)
-                # clip the gradient so it doesn't explode or vanish
-                nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                scaler.step(optimizer)
-                scaler.update()
-                scheduler.step()
-                optimizer.zero_grad(set_to_none=True)
+            # unscale the optimizer for gradient clipping
+            scaler.unscale_(optimizer)
+            # clip the gradient so it doesn't explode or vanish
+            nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            scaler.step(optimizer)
+            scaler.update()
+            scheduler.step()
             
             # update the progress bar   
             pbar.set_postfix(Loss=loss.item())
@@ -115,16 +122,15 @@ if __name__ == "__main__":
     args.dropout = 0.1
 
     # training config arguments
-    args.epochs = 16
+    args.epochs = 13
     args.run_name = "TransformerV2"
-    args.batch_size = 32
+    args.batch_size = 16
     args.weight_decay = 0.01
-    args.lr = 1e-4
+    args.lr = 2e-5
     args.betas = (0.9, 0.98)
     args.eps = 1e-4
-    args.warmup_iters = 3e4
-    args.lr_decay_iters = 3e5
-    args.grad_accumulation_steps = 8
+    args.warmup_iters = 4e5
+    args.lr_decay_iters = 4e6
     args.backend='nccl'
 
     main(args)
