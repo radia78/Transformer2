@@ -124,6 +124,8 @@ if __name__ == "__main__":
     # training config arguments
     args.epochs = 13
     args.run_name = "TransformerV2"
+    args.seed = 13332
+    args.dtype = 'bfloat16'
     args.batch_size = 16
     args.weight_decay = 0.01
     args.lr = 2e-5
