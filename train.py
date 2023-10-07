@@ -20,7 +20,6 @@ from torch.distributed import init_process_group, destroy_process_group
 LOCAL_RANK = int(os.environ['LOCAL_RANK']) # local GPU id
 WORLD_SIZE = int(os.environ['WORLD_SIZE']) # the number of GPUs in total
 
-
 def create_model(args):
     # creating the configuration of the transformers, adjustable by the user
     model_config = TransformerConfig(
@@ -73,8 +72,6 @@ def train(args):
         print(f"Epoch {epoch + 1} on GPU {LOCAL_RANK}: ")
         pbar = tqdm(dataloader)
         for i, (src, tgt) in enumerate(pbar):
-            # reset the gradients
-            optimizer.zero_grad(set_to_none=True)
 
             # send both to the GPU
             src = src.to(LOCAL_RANK)
@@ -84,17 +81,20 @@ def train(args):
             # use auto mixed precision
             with ctx:
                 output = model(src, tgt)
-                loss = criterion(output.view(-1, output.size(-1)), tgt.view(-1)) / args.grad_accumulation_steps
+                loss = criterion(output.view(-1, output.size(-1)), tgt.view(-1))
+                loss = loss / args.grad_accumulation_steps
+
             # scale the loss
             scaler.scale(loss).backward()
 
-            # unscale the optimizer for gradient clipping
-            scaler.unscale_(optimizer)
-            # clip the gradient so it doesn't explode or vanish
-            nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            scaler.step(optimizer)
-            scaler.update()
-            scheduler.step()
+            if ((i + 1) % args.grad_accumulation_steps == 0) or ((i + 1) == l):
+                # unscale the optimizer for gradient clipping
+                scaler.unscale_(optimizer)
+                # clip the gradient so it doesn't explode or vanish
+                nn.utils.clip_grad_norm_(model.parameters(), 1.0, error_if_nonfinite=True)
+                scaler.step(optimizer)
+                scaler.update()
+                scheduler.step()
             
             # update the progress bar   
             pbar.set_postfix(Loss=loss.item())
@@ -125,14 +125,15 @@ if __name__ == "__main__":
     args.epochs = 13
     args.run_name = "TransformerV2"
     args.seed = 13332
-    args.dtype = 'bfloat16'
+    args.dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
     args.batch_size = 16
+    args.grad_accumulation_steps = 32
     args.weight_decay = 0.01
-    args.lr = 2e-5
+    args.lr = 5e-5
     args.betas = (0.9, 0.98)
     args.eps = 1e-4
-    args.warmup_iters = 4e5
-    args.lr_decay_iters = 4e6
+    args.warmup_iters = 12e3
+    args.lr_decay_iters = 12e4
     args.backend='nccl'
-
+    
     main(args)
