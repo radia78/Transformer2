@@ -81,6 +81,8 @@ def train(args):
         pbar = tqdm(dataloader)
         for i, (src, tgt) in enumerate(pbar):
 
+            optimizer.zero_grad(set_to_none=True) # zero out the gradients
+
             # send both to the GPU
             src = src.to(LOCAL_RANK)
             tgt = tgt.to(LOCAL_RANK)
@@ -95,16 +97,13 @@ def train(args):
             # scale the loss
             scaler.scale(loss).backward()
 
-            if ((i + 1) % args.grad_accumulation_steps == 0) or ((i + 1) == l):
+            scaler.unscale_(optimizer) # unscale the optimizer for gradient clipping
+            nn.utils.clip_grad_norm_(model.parameters(), 1.0) # clip the gradient so it doesn't explode or vanish
+            scaler.step(optimizer) # update the optimizer - should skip steps with NaN's or infs
+            scaler.update() # update the scale factor
 
-                scaler.unscale_(optimizer) # unscale the optimizer for gradient clipping
-                nn.utils.clip_grad_norm_(model.parameters(), 1.0) # clip the gradient so it doesn't explode or vanish
-                scaler.step(optimizer) # update the optimizer - should skip steps with NaN's or infs
-                scaler.update() # update the scale factor
-                optimizer.zero_grad(set_to_none=True) # zero out the gradients
-
-                # update the learning rate
-                scheduler.step()
+            # update the learning rate
+            scheduler.step()
             
             # update the progress bar   
             pbar.set_postfix(Loss=loss.item())
@@ -137,15 +136,14 @@ if __name__ == "__main__":
     args.amp = True
     args.seed = 13332
     args.dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
-    args.batch_size = 32
-    args.grad_accumulation_steps = 16
+    args.batch_size = 64
     args.weight_decay = 0.01
     args.max_lr = 2e-4
     args.min_lr = 2e-5
     args.betas = (0.9, 0.98)
     args.eps = 1e-4
-    args.warmup_iters = 12e3
-    args.lr_decay_iters = 12e4
+    args.warmup_iters = 5e4
+    args.lr_decay_iters = 1e6
     args.backend='nccl'
     
     main(args)
