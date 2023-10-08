@@ -50,15 +50,15 @@ def get_data(batch_size):
     return dataloader
 
 # learning rate decay scheduler (cosine with warmup)
-def lr_schedule(step, lr, warmup_steps, decay_steps):
+def lr_schedule(step, max_lr, min_lr, warmup_steps, decay_steps):
     # cache the coefficients for the steps
-    warmup_coefficient = lr/warmup_steps
-    decay_coefficient = lr/decay_steps
+    warmup_coefficient = max_lr/warmup_steps
+    decay_coefficient = max_lr/decay_steps
     if step < warmup_steps:
-        return step * warmup_coefficient
+        return max(step * warmup_coefficient, min_lr)
     
     else:
-        return lr - step * decay_coefficient
+        return max(max_lr - step * decay_coefficient, min_lr)
 
 # function to implement weight decay to only parameters that have a higher dimension
 def configure_optimizer(model, weight_decay, learning_rate, betas, eps, device_type):

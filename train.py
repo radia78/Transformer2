@@ -21,6 +21,7 @@ LOCAL_RANK = int(os.environ['LOCAL_RANK']) # local GPU id
 WORLD_SIZE = int(os.environ['WORLD_SIZE']) # the number of GPUs in total
 
 def create_model(args):
+
     # creating the configuration of the transformers, adjustable by the user
     model_config = TransformerConfig(
         n_emb=args.n_emb,
@@ -35,26 +36,27 @@ def create_model(args):
     return model
 
 def train(args):
+
     # setup torch training computational stuff
     torch.manual_seed(args.seed)
-    torch.backends.cuda.matmul.allow_tf32 = True # allowing some full precision calculation
+    torch.backends.cuda.matmul.allow_tf32 = True # setting up tensorfloat point calculations
     torch.backends.cudnn.allow_tf32 = True
     ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[args.dtype]
-    ctx = torch.amp.autocast(device_type='cuda', dtype=ptdtype)
+    ctx = torch.amp.autocast(device_type='cuda', dtype=ptdtype, enabled=args.amp)
 
     # setup the training by obtaining the necessary ingredients
     setup_logging(args.run_name)
     dataloader = get_data(args.batch_size)
     model = create_model(args)
-    scaler = torch.cuda.amp.GradScaler()
+    scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
 
     # configure the optimizer
-    optimizer = configure_optimizer(model, args.weight_decay, args.lr, args.betas, args.eps, 'cuda')
+    optimizer = configure_optimizer(model, args.weight_decay, args.max_lr, args.betas, args.eps, 'cuda')
 
-    # configure the cosine learning rate decay schedule
+    # configure the linear decay schedule, we cap the learning rate to a minimum threshold
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer=optimizer,
-        lr_lambda=lambda it: lr_schedule(it, args.lr, args.warmup_iters, args.lr_decay_iters)
+        lr_lambda=lambda it: lr_schedule(it, args.max_lr, args.min_lr, args.warmup_iters, args.lr_decay_iters)
     )
 
     # configure the loss function
@@ -88,12 +90,14 @@ def train(args):
             scaler.scale(loss).backward()
 
             if ((i + 1) % args.grad_accumulation_steps == 0) or ((i + 1) == l):
-                # unscale the optimizer for gradient clipping
-                scaler.unscale_(optimizer)
-                # clip the gradient so it doesn't explode or vanish
-                nn.utils.clip_grad_norm_(model.parameters(), 1.0, error_if_nonfinite=True)
-                scaler.step(optimizer)
-                scaler.update()
+
+                scaler.unscale_(optimizer) # unscale the optimizer for gradient clipping
+                nn.utils.clip_grad_norm_(model.parameters(), 1.0) # clip the gradient so it doesn't explode or vanish
+                scaler.step(optimizer) # update the optimizer - should skip steps with NaN's or infs
+                scaler.update() # update the scale factor
+                optimizer.zero_grad(set_to_none=True) # zero out the gradients
+
+                # update the learning rate
                 scheduler.step()
             
             # update the progress bar   
@@ -126,10 +130,11 @@ if __name__ == "__main__":
     args.run_name = "TransformerV2"
     args.seed = 13332
     args.dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
-    args.batch_size = 16
-    args.grad_accumulation_steps = 32
+    args.batch_size = 32
+    args.grad_accumulation_steps = 16
     args.weight_decay = 0.01
-    args.lr = 5e-5
+    args.max_lr = 2e-4
+    args.min_lr = 2e-5
     args.betas = (0.9, 0.98)
     args.eps = 1e-4
     args.warmup_iters = 12e3
