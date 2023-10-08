@@ -19,6 +19,8 @@ from torch.distributed import init_process_group, destroy_process_group
 
 LOCAL_RANK = int(os.environ['LOCAL_RANK']) # local GPU id
 WORLD_SIZE = int(os.environ['WORLD_SIZE']) # the number of GPUs in total
+DEVICE = f'cuda:{LOCAL_RANK}'
+torch.cuda.set_device(DEVICE)
 
 def create_model(args):
 
@@ -32,6 +34,10 @@ def create_model(args):
         dropout=args.dropout
     )
     model = Transformer(model_config).to(LOCAL_RANK)
+
+    # use torch.compile for brrrrr speed if possible 
+    if hasattr(torch, 'compile'):
+        model = torch.compile(model)
     model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK) # send the model across GPU/nodes
     return model
 
@@ -128,6 +134,7 @@ if __name__ == "__main__":
     # training config arguments
     args.epochs = 13
     args.run_name = "TransformerV2"
+    args.amp = True
     args.seed = 13332
     args.dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
     args.batch_size = 32
