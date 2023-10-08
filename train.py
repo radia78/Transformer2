@@ -34,10 +34,6 @@ def create_model(args):
         dropout=args.dropout
     )
     model = Transformer(model_config).to(LOCAL_RANK)
-
-    # use torch.compile for brrrrr speed if possible 
-    if hasattr(torch, 'compile'):
-        model = torch.compile(model)
     model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK) # send the model across GPU/nodes
     return model
 
@@ -92,7 +88,7 @@ def train(args):
             with ctx:
                 output = model(src, tgt)
                 loss = criterion(output.view(-1, output.size(-1)), tgt.view(-1))
-                loss = loss / args.grad_accumulation_steps
+                loss = loss
 
             # scale the loss
             scaler.scale(loss).backward()
