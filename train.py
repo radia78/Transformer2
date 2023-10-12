@@ -34,6 +34,8 @@ def create_model(args):
         dropout=args.dropout
     )
     model = Transformer(model_config).to(LOCAL_RANK)
+    if hasattr(torch, 'compile'):
+        model = torch.compile(model) # only available for PyTorch 2.0
     model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK) # send the model across GPU/nodes
     return model
 

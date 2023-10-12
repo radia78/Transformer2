@@ -23,13 +23,15 @@ class RotaryEmbedding(nn.Module):
         freqs = torch.einsum("i , j -> i j", seq, self.inv_freq)
         return torch.cat((freqs, freqs), dim=-1)
 
+
 def rotate_half(x):
     x = rearrange(x, "... (j d) -> ... j d", j=2)
     x1, x2 = x.unbind(dim=-2)
     return torch.cat((-x2, x1), dim=-1)
 
-def apply_rotary_pos_emb(pos, t, n):
-    return (t * pos.cos()[None, None, :n, :]) + (rotate_half(t) * pos.sin()[None, None, :n, :])
+
+def apply_rotary_pos_emb(pos, t):
+    return (t * pos.cos()) + (rotate_half(t) * pos.sin())
 
 # Biao Zhang's implementation of RMS Norm
 class RMSNorm(nn.Module):
@@ -82,9 +84,9 @@ class SwiGLU(nn.Module):
         return F.silu(gate) * x
 
 # implement the self attention mechanism for rotated embeddings
-class MultiQueryAttention(nn.Module):
+class MultiHeadAttention(nn.Module):
     def __init__(self, config, causal=False):
-        super(MultiQueryAttention, self).__init__()
+        super(MultiHeadAttention, self).__init__()
         # cache the dimension of the fused parallel attention
         self.n_emb = config.n_emb
         self.n_head = config.n_head
@@ -92,17 +94,17 @@ class MultiQueryAttention(nn.Module):
         self.max_len = config.max_len
 
         # create the projection layers
-        self.fused_kv_proj = nn.Linear(config.n_emb, 2 * self.head_dim, bias=False)
+        self.fused_kv_proj = nn.Linear(config.n_emb, 2 * self.n_emb, bias=False)
         self.q_proj = nn.Linear(config.n_emb, config.n_emb, bias=False)
         self.attn_out = nn.Linear(config.n_emb, config.n_emb) # output projection
 
         self.scale = config.n_emb ** -0.5
-        self.rotary_emb = RotaryEmbedding(self.head_dim)
+        self.rotary_emb = RotaryEmbedding(config.n_emb // config.n_head)
 
         # regularization
         self.dropout = config.dropout
         self.attn_dropout = nn.Dropout(config.dropout)
-        self.resid = nn.Dropout(config.dropout)
+        self.resid_dropout = nn.Dropout(config.dropout)
 
         # save the booleans
         self.causal=causal
@@ -137,13 +139,13 @@ class MultiQueryAttention(nn.Module):
             m = x
 
         # calculate q, k, v
-        k, v = self.fused_kv_proj(m).split(self.head_dim, dim=-1)
+        k, v = self.fused_kv_proj(m).split(self.n_emb, dim=-1)
         q = self.q_proj(x)
         q, k, v = map(lambda t: rearrange(t, "b i (h d) -> b h i d", d=head_dim), (q, k, v))
 
         # applying the rotary positional embedding to Q and K
-        positions = self.get_rotary_embedding(self.max_len, device)
-        q, k = map(lambda t: apply_rotary_pos_emb(positions, t, t.shape[-2]), (q, k))
+        pos = self.get_rotary_embedding(self.max_len, device)
+        q, k = map(lambda t: apply_rotary_pos_emb(pos[..., t.shape[1], :], t), (q, k))
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, S) -> (B, nh, T, S)
         if self.flash: # flash attention go brrrrrrrrrr
@@ -153,14 +155,14 @@ class MultiQueryAttention(nn.Module):
             y = rearrange(y, "b h i d -> b i (h d)")
 
         else:
-            att = torch.einsum("b h i d, b j d -> b h i j", q, k.squeeze(1)) * self.scale
+            att = torch.einsum("b h i d, b h j d -> b h i j", q, k) * self.scale
             if self.causal:
                  att = att.masked_fill(self.bias[:,:,:n,:n] == 0, float('-inf'))
             att = self.attn_dropout(F.softmax(att, dim=-1))
-            y = torch.einsum("b h i j, b j d -> b h i d", att, v.squeeze(1)) # (B, nh, T, S) x (B, nh, S, hs) -> (B, nh, T, hs)
+            y = torch.einsum("b h i j, b h j d -> b h i d", att, v) # (B, nh, T, S) x (B, nh, S, hs) -> (B, nh, T, hs)
             y = rearrange(y, "b h i d -> b i (h d)")
 
-        return self.attn_out(y)
+        return self.resid_dropout(self.attn_out(y))
     
 class MLP(nn.Module):
     def __init__(self, config):
@@ -182,13 +184,12 @@ class EncoderBlock(nn.Module):
     def __init__(self, config):
         super(EncoderBlock, self).__init__()
         self.ln_1 = RMSNorm(config.n_emb)
-        self.attn = nn.MultiheadAttention(config.n_emb, config.n_head, config.dropout, False, batch_first=True)
+        self.attn = MultiHeadAttention(config)
         self.ln_2 = RMSNorm(config.n_emb)
         self.mlp = MLP(config)
 
     def forward(self, x):
-        x_temp = self.ln_1(x)
-        x = x + self.attn(x_temp, x_temp, x_temp)[0]
+        x = x + self.attn(self.ln_1(x))
         x = x + self.mlp(self.ln_2(x))
         return x
     
@@ -196,9 +197,9 @@ class DecoderBlock(nn.Module):
     def __init__(self, config):
         super(DecoderBlock, self).__init__()
         self.ln_1 = RMSNorm(config.n_emb)
-        self.attn1 = MultiQueryAttention(config, causal=True)
+        self.attn1 = MultiHeadAttention(config, causal=True)
         self.ln_2 = RMSNorm(config.n_emb)
-        self.attn2 = MultiQueryAttention(config)
+        self.attn2 = MultiHeadAttention(config)
         self.ln_3 = RMSNorm(config.n_emb)
         self.mlp = MLP(config)
     
