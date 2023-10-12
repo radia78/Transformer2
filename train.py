@@ -130,14 +130,14 @@ if __name__ == "__main__":
     args.seed = 13332
     args.dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
     args.batch_size = 16
-    args.grad_accumulation_steps = 16
+    args.grad_accumulation_steps = 32
     args.weight_decay = 0.1
     args.max_lr = 4e-4
     args.min_lr = 4e-5
     args.betas = (0.9, 0.98)
     args.eps = 1e-6
-    args.warmup_iters = 12e3
-    args.decay_iters = 24e4
+    args.warmup_iters = int(6e3)
+    args.decay_iters = int(12e4)
     args.backend='nccl'
     
     main(args)
