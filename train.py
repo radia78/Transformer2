@@ -34,8 +34,6 @@ def create_model(args):
         dropout=args.dropout
     )
     model = Transformer(model_config).to(LOCAL_RANK)
-    if hasattr(torch, 'compile'):
-        model = torch.compile(model) # only available for PyTorch 2.0
     model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK) # send the model across GPU/nodes
     return model
 
@@ -58,10 +56,7 @@ def train(args):
     optimizer = configure_optimizer(model, args.weight_decay, args.max_lr, args.betas, args.eps, 'cuda')
 
     # configure the linear decay schedule, we cap the learning rate to a minimum threshold
-    scheduler = torch.optim.lr_scheduler.LambdaLR(
-        optimizer=optimizer,
-        lr_lambda=lambda it: lr_schedule(it, args.max_lr, args.min_lr, args.warmup_iters, args.lr_decay_iters)
-    )
+    scheduler = get_lr_scheduler(optimizer, args.warmup_iters, args.decay_iters, args.min_lr, args.max_lr)
 
     # configure the loss function
     criterion = nn.CrossEntropyLoss(ignore_index=1)
@@ -137,12 +132,12 @@ if __name__ == "__main__":
     args.batch_size = 16
     args.grad_accumulation_steps = 16
     args.weight_decay = 0.1
-    args.max_lr = 2e-4
-    args.min_lr = 2e-5
+    args.max_lr = 4e-4
+    args.min_lr = 4e-5
     args.betas = (0.9, 0.98)
-    args.eps = 1e-4
+    args.eps = 1e-6
     args.warmup_iters = 12e3
-    args.lr_decay_iters = 24e4
+    args.decay_iters = 24e4
     args.backend='nccl'
     
     main(args)

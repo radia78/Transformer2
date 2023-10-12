@@ -1,6 +1,8 @@
 import torch
 import os
 import inspect
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from ignite.handlers.param_scheduler import create_lr_scheduler_with_warmup
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from datasets import load_dataset
@@ -49,16 +51,10 @@ def get_data(batch_size):
 
     return dataloader
 
-# learning rate decay scheduler (cosine with warmup)
-def lr_schedule(step, max_lr, min_lr, warmup_steps, decay_steps):
-    # cache the coefficients for the steps
-    warmup_coefficient = max_lr/warmup_steps
-    decay_coefficient = max_lr/decay_steps
-    if step < warmup_steps:
-        return max(step * warmup_coefficient, min_lr)
-    
-    else:
-        return max(max_lr - step * decay_coefficient, min_lr)
+def get_lr_scheduler(optimizer, warmup_iters, decay_iters, min_lr, max_lr):
+    cosine_decay = CosineAnnealingLR(optimizer, decay_iters, min_lr)
+    lr_scheduler = create_lr_scheduler_with_warmup(cosine_decay, min_lr, warmup_iters, max_lr)
+    return lr_scheduler
 
 # function to implement weight decay to only parameters that have a higher dimension
 def configure_optimizer(model, weight_decay, learning_rate, betas, eps, device_type):
