@@ -1,8 +1,7 @@
 import torch
 import os
 import inspect
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from ignite.handlers.param_scheduler import create_lr_scheduler_with_warmup
+from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from datasets import load_dataset
@@ -51,10 +50,17 @@ def get_data(batch_size):
 
     return dataloader
 
+def LinearWarmupLR(iter:int, warmup_iters: int, start_lr: float, end_lr: float):
+    coeff = (end_lr - start_lr)/warmup_iters
+    return iter * coeff
+     
+
 def get_lr_scheduler(optimizer, warmup_iters, decay_iters, min_lr, max_lr):
+    # create the linear warmup and cosine decay
+    warmup = lambda iter: LinearWarmupLR(iter, warmup_iters, 0.0, max_lr)
+    linear_warmup = LambdaLR(optimizer, lr_lambda=warmup)
     cosine_decay = CosineAnnealingLR(optimizer, decay_iters, min_lr)
-    lr_scheduler = create_lr_scheduler_with_warmup(cosine_decay, min_lr, warmup_iters, max_lr)
-    return lr_scheduler
+    return SequentialLR(optimizer, [linear_warmup, cosine_decay], [warmup_iters])
 
 # function to implement weight decay to only parameters that have a higher dimension
 def configure_optimizer(model, weight_decay, learning_rate, betas, eps, device_type):

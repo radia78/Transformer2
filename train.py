@@ -55,7 +55,7 @@ def train(args):
     # configure the optimizer
     optimizer = configure_optimizer(model, args.weight_decay, args.max_lr, args.betas, args.eps, 'cuda')
 
-    # configure the linear decay schedule, we cap the learning rate to a minimum threshold
+    # configure the learning rate scheduler (cosine decay with linear warmup) 
     scheduler = get_lr_scheduler(optimizer, args.warmup_iters, args.decay_iters, args.min_lr, args.max_lr)
 
     # configure the loss function
