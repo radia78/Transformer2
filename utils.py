@@ -1,5 +1,6 @@
 import torch
 import os
+import math
 import inspect
 from torch.optim.lr_scheduler import CosineAnnealingLR, LambdaLR, SequentialLR
 from torch.utils.data import DataLoader
@@ -50,17 +51,27 @@ def get_data(batch_size):
 
     return dataloader
 
-def LinearWarmupLR(iter:int, warmup_iters: int, start_lr: float, end_lr: float):
-    coeff = (end_lr - start_lr)/warmup_iters
-    return iter * coeff
-     
+def CosineAnneallingWarmupLR(iter:int, warmup_iters: int, decay_iters:int, max_lr: float, min_lr: float):
+
+    # 1) linear warmup for warmup_iters steps
+    if iter < warmup_iters:
+        return max_lr * iter / warmup_iters
+    
+    # 2) if it > lr_decay_iters, return min learning rate
+    if iter > decay_iters:
+        return min_lr
+    
+    # 3) in between, use cosine decay down to min learning rate
+    decay_ratio = (iter - warmup_iters) / (decay_iters - warmup_iters)
+    assert 0 <= decay_ratio <= 1
+    coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
+    return min_lr + coeff * (max_lr - min_lr)
 
 def get_lr_scheduler(optimizer, warmup_iters, decay_iters, min_lr, max_lr):
     # create the linear warmup and cosine decay
-    warmup = lambda iter: LinearWarmupLR(iter, warmup_iters, 0.0, max_lr)
-    linear_warmup = LambdaLR(optimizer, lr_lambda=warmup)
-    cosine_decay = CosineAnnealingLR(optimizer, decay_iters, min_lr)
-    return SequentialLR(optimizer, [linear_warmup, cosine_decay], [warmup_iters])
+    lr_lambda = lambda iter: CosineAnneallingWarmupLR(iter, warmup_iters, decay_iters, max_lr, min_lr)
+    scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
+    return scheduler
 
 # function to implement weight decay to only parameters that have a higher dimension
 def configure_optimizer(model, weight_decay, learning_rate, betas, eps, device_type):
