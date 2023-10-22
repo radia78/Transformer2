@@ -32,20 +32,20 @@ class MachineTranslationCollator:
         return src_batch, tgt_batch
 
 # load the data and send it across nodes/GPUs
-def get_data(batch_size):
+def get_data(batch_size, distributed=False):
     wmt14 = load_dataset("wmt14", "de-en", split="train")['translation'] # load the data from huggingface
     tokenizer = PreTrainedTokenizerFast.from_pretrained('radia/wmt14-de2en-tokenizer') # load the pretrained tokenizer from huggingface
     collator = MachineTranslationCollator(tokenizer, ['de', 'en']) # create the collating function
 
     num_workers = cpu_count() // 2 # find the number of cores that can work on 
-    sampler = DistributedSampler(wmt14['train']) # this sampler is important so it sends data to GPUs and nodes
+    sampler = DistributedSampler(wmt14) if distributed else None # this sampler is important so it sends data to GPUs and nodes
 
     dataloader = DataLoader(
-        dataset=wmt14['train'],
+        dataset=wmt14,
         sampler=sampler,
         batch_size=batch_size,
         collate_fn=collator.collate_fn,
-        shuffle=False,
+        shuffle=False if distributed else True,
         num_workers=num_workers
     )
 
