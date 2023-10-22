@@ -6,7 +6,7 @@ from tokenizers.processors import TemplateProcessing
 from tokenizers.decoders import BPEDecoder
 from dataclasses import dataclass, field
 from typing import List
-from datasets import load_dataset
+from datasets import inspect_dataset, load_dataset_builder
 from transformers import PreTrainedTokenizerFast
 import huggingface_hub
 from huggingface_hub import HfApi
@@ -47,9 +47,27 @@ class TokenizerConfig:
 if __name__ == "__main__":
     train_tokenizer = True # train the tokenizer and push it to huggingface
 
+    inspect_dataset("wmt14", "path/to/scripts")
+    builder = load_dataset_builder(
+        "path/to/scripts/wmt_utils.py",
+        language_pair=("de", "en"),
+        subsets={
+            datasets.Split.TRAIN: ["commoncrawl_deen"],
+            datasets.Split.VALIDATION: ["euelections_dev2019"],
+        },
+    )
+
+# Standard version
+builder.download_and_prepare()
+ds = builder.as_dataset()
+
+# Streamable version
+ds = builder.as_streaming_dataset()
+
+
     if train_tokenizer:
         langs = ['de', 'en']
-        dataset = load_dataset("radia/wmt14-de2en")
+        dataset = load_dataset("")
         tok_config = TokenizerConfig(spl_tokens=["<s>", "<pad>", "</s>", "<mask>", "<unk>"])
         tokenizer = MachineTranslationTokenizer(tok_config) # initiate class
         tokenizer.train_tokenizer(dataset, "data/mt/transformer-mt-base", langs) # train the tokenizer

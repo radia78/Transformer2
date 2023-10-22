@@ -34,8 +34,10 @@ class Generator:
     
     def greedy_search(self, src_tokens, max_len, temperature=1.0):
 
+        # cache the number of batches
+        b = src_tokens.shape[0]
         # create a target dummy with only the start of sentence token
-        idx = torch.zeros(1, 1, device=self.device).long()
+        idx = torch.zeros(b, 1, device=self.device).long()
         # send the source tokens into the same device
         src_tokens = src_tokens.to(self.device)
 
@@ -44,13 +46,17 @@ class Generator:
             # forward the model to get the logits for the index in the sequence
             with torch.no_grad():
                 logits = self.model(src_tokens, idx)
-                logits = logits [:, -1, :] / temperature
+                logits = logits[:, -1, :] / temperature
 
-            # apply softmax to convert logits to (normalized) probabilities
-            probs = F.softmax(logits, dim=-1)
+                if b == 1:
+                    logits = logits.unsqueeze(0)
 
-            # sample from the distribution
-            idx_next = torch.multinomial(probs, num_samples=1)
+            print(logits.shape)
+
+            # choose the most likely guest
+            idx_next = logits.argmax(2)
+
+            print(idx_next.shape)
 
             # see if the next token is the end of sentence token
             if idx_next.item() == 2:
@@ -76,6 +82,6 @@ if __name__ == "__main__":
     # creating the source tokens
     src_sent = "Ich bin trinke Bier."
 
-    generator = Generator('TransformerV2/chkpt.pt', model_config, 'mps')
+    generator = Generator('models/TransformerV2/chkpt.pt', model_config, 'cuda')
     result = generator.decode(src_sent, 512, 1.0)
     print(result)
