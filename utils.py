@@ -33,7 +33,7 @@ class MachineTranslationCollator:
 
 # load the data and send it across nodes/GPUs
 def get_data(batch_size):
-    wmt14 = load_dataset('radia/wmt14-de2en') # load the data from huggingface
+    wmt14 = load_dataset("wmt14", "de-en", split="train")['translation'] # load the data from huggingface
     tokenizer = PreTrainedTokenizerFast.from_pretrained('radia/wmt14-de2en-tokenizer') # load the pretrained tokenizer from huggingface
     collator = MachineTranslationCollator(tokenizer, ['de', 'en']) # create the collating function
 
