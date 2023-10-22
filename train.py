@@ -126,7 +126,7 @@ if __name__ == "__main__":
     # training config arguments
     args.epochs = 13
     args.run_name = "TransformerV2"
-    args.amp = True
+    args.amp = False
     args.seed = 13332
     args.dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
     args.batch_size = 16
