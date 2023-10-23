@@ -31,6 +31,7 @@ class MachineTranslationTokenizer:
         tokenizer.train_from_iterator([i[lang] for lang in langs for i in dataset], trainer)
         tokenizer.decoder = BPEDecoder(suffix="_")
         tokenizer.enable_truncation(max_length=512)
+        tokenizer.enable_padding(pad_id=tokenizer.token_to_id("<pad>"), pad_token="<pad>")
         tokenizer.post_processor = TemplateProcessing(
             single="<s> $A </s>",
             pair="<s> $A </s> $B:1 </s>:1",
@@ -41,6 +42,10 @@ class MachineTranslationTokenizer:
 
 @dataclass
 class TokenizerConfig:
+    bos_token:str = "<s>" # token for the start of sentence
+    pad_token:str = "<pad>" # token for padding
+    eos_token:str = "</s>" # token for the end of sentence
+    mask_token:str = "<mask>" # mask token
     unk_token:str = "<unk>" # token for unknown words
     spl_tokens:list[str] = field(default_factory=list)
 

@@ -12,18 +12,19 @@ from torch.utils.data import DistributedSampler
 
 # Define a collator class so we avoid nested programming
 class MachineTranslationCollator:
-    def __init__(self, tokenizer, langs, pad_idx: int=1):
+    def __init__(self, tokenizer, langs, max_len, pad_idx: int=1):
         self.tokenizer = tokenizer
         self.pad_idx = pad_idx
         self.src_lang = langs[0]
         self.tgt_lang = langs[1]
+        self.max_len = max_len
 
     def collate_fn(self, batch):
         src_batch, tgt_batch = [], []
         for sentence in batch:
             # tensorize the input sentence
-            src_batch.append(torch.tensor(self.tokenizer.encode(sentence[self.src_lang])))
-            tgt_batch.append(torch.tensor(self.tokenizer.encode(sentence[self.tgt_lang])))
+            src_batch.append(torch.tensor(self.tokenizer.encode(sentence[self.src_lang], truncation=True, padding='max_length', max_length=self.max_len)))
+            tgt_batch.append(torch.tensor(self.tokenizer.encode(sentence[self.tgt_lang], truncation=True, padding='max_length', max_length=self.max_len)))
         # pad the sequences
         src_batch = pad_sequence(src_batch, padding_value=self.pad_idx, batch_first=True)
         tgt_batch = pad_sequence(tgt_batch, padding_value=self.pad_idx, batch_first=True)
@@ -32,10 +33,10 @@ class MachineTranslationCollator:
         return src_batch, tgt_batch
 
 # load the data and send it across nodes/GPUs
-def get_data(batch_size, distributed=False):
-    wmt14 = load_dataset("wmt14", "de-en", split="train")['translation'] # load the data from huggingface
+def get_data(batch_size, langs, max_len, distributed=False):
+    wmt14 = load_dataset("wmt14", f"{langs[0]}-{langs[1]}", split="train")['translation'] # load the data from huggingface
     tokenizer = PreTrainedTokenizerFast.from_pretrained('radia/wmt14-de2en-tokenizer') # load the pretrained tokenizer from huggingface
-    collator = MachineTranslationCollator(tokenizer, ['de', 'en']) # create the collating function
+    collator = MachineTranslationCollator(tokenizer, langs, max_len) # create the collating function
 
     num_workers = cpu_count() // 2 # find the number of cores that can work on 
     sampler = DistributedSampler(wmt14) if distributed else None # this sampler is important so it sends data to GPUs and nodes
@@ -86,3 +87,9 @@ def configure_optimizer(model, weight_decay, learning_rate, betas, eps, device_t
 def setup_logging(run_name):
     os.makedirs("models", exist_ok=True)
     os.makedirs(os.path.join("models", run_name), exist_ok=True)
+
+if __name__ == "__main__":
+    dl = get_data(32, ['de', 'en'], 512)
+    src_sample, tgt_sample = next(iter(dl))
+    print(src_sample.shape)
+    print(tgt_sample.shape)

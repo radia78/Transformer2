@@ -124,7 +124,7 @@ if __name__ == "__main__":
     args.dropout = 0.1
 
     # training config arguments
-    args.epochs = 13
+    args.epochs = 16
     args.run_name = "TransformerV2"
     args.amp = False
     args.seed = 13332
