@@ -132,7 +132,7 @@ class MultiHeadAttention(nn.Module):
         n, i, j - sequence_lengths
         d - feature dimension
         """
-        n, head_dim, device = self.max_len, self.head_dim, x.device
+        n, head_dim, device = x.shape[1], self.head_dim, x.device
         if m is None: # just in case there's cross - attention
             m = x
 
@@ -143,7 +143,7 @@ class MultiHeadAttention(nn.Module):
 
         # applying the rotary positional embedding to Q and K
         pos = self.get_rotary_embedding(self.max_len, device)
-        q, k = map(lambda t: apply_rotary_pos_emb(pos, t), (q, k))
+        q, k = map(lambda t: apply_rotary_pos_emb(pos[:t.shape[2], :], t), (q, k))
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, S) -> (B, nh, T, S)
         if self.flash: # flash attention go brrrrrrrrrr
@@ -275,13 +275,13 @@ if __name__ == "__main__":
         n_emb = 512,
         n_head = 8,
         n_layer = 6,
-        max_len = 64,
+        max_len = 512,
         vocab_size = 37467,
         dropout = 0.1
     )
     model = Transformer(model_config)
-    a = torch.randint(0, 37467, (32, 64))
-    b = torch.randint(0, 37467, (32, 64))
+    a = torch.randint(0, 37467, (32, 12))
+    b = torch.randint(0, 37467, (32, 16))
     model.eval()
     output = model(a, b)
     print(output.shape)

@@ -23,8 +23,8 @@ class MachineTranslationCollator:
         src_batch, tgt_batch = [], []
         for sentence in batch:
             # tensorize the input sentence
-            src_batch.append(torch.tensor(self.tokenizer.encode(sentence[self.src_lang], truncation=True, padding='max_length', max_length=self.max_len)))
-            tgt_batch.append(torch.tensor(self.tokenizer.encode(sentence[self.tgt_lang], truncation=True, padding='max_length', max_length=self.max_len)))
+            src_batch.append(torch.tensor(self.tokenizer.encode(sentence[self.src_lang], truncation=True, max_length=self.max_len)))
+            tgt_batch.append(torch.tensor(self.tokenizer.encode(sentence[self.tgt_lang], truncation=True, max_length=self.max_len)))
         # pad the sequences
         src_batch = pad_sequence(src_batch, padding_value=self.pad_idx, batch_first=True)
         tgt_batch = pad_sequence(tgt_batch, padding_value=self.pad_idx, batch_first=True)
