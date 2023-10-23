@@ -34,7 +34,6 @@ def create_model(args):
         dropout=args.dropout
     )
     model = Transformer(model_config).to(LOCAL_RANK)
-    model = torch.compile(model, dynamic=True)
     model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK) # send the model across GPU/nodes
     return model
 
@@ -49,7 +48,7 @@ def train(args):
 
     # setup the training by obtaining the necessary ingredients
     setup_logging(args.run_name)
-    dataloader = get_data(args.batch_size)
+    dataloader = get_data(args.batch_size, args.langs, args.max_len, distributed=True)
     model = create_model(args)
     scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
 
@@ -126,8 +125,9 @@ if __name__ == "__main__":
 
     # training config arguments
     args.epochs = 16
+    args.langs = ['de', 'en']
     args.run_name = "TransformerV2"
-    args.amp = False
+    args.amp = True
     args.seed = 13332
     args.dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
     args.batch_size = 16
