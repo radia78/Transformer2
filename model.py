@@ -222,6 +222,8 @@ class Transformer(nn.Module):
             dec = nn.ModuleList([DecoderBlock(config) for _ in range(config.n_layer)]),
             ln_f = nn.LayerNorm(config.n_emb)
         ))
+
+        self.lm_head = nn.Linear(config.n_emb, config.vocab_size, bias=False)
         
         # init all weights
         self.apply(self._init_weights_)

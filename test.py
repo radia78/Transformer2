@@ -11,6 +11,7 @@ class Generator:
 
         # initialize tokenizer
         self.tokenizer = PreTrainedTokenizerFast.from_pretrained('radia/wmt14-de2en-tokenizer')
+        print()
 
         self.device = device
 
@@ -122,7 +123,7 @@ if __name__ == "__main__":
         n_head = 8,
         n_layer = 6,
         max_len = 512,
-        vocab_size = 37467,
+        vocab_size = 31556,
         dropout = 0.1
     )
 
