@@ -53,10 +53,10 @@ def train(args):
     scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
 
     # configure the optimizer
-    optimizer = configure_optimizer(model, args.weight_decay, args.max_lr, args.betas, args.eps, 'cuda')
+    optimizer = configure_optimizer(model, args.lr, args.betas, args.eps, 'cuda')
 
     # configure the learning rate scheduler (cosine decay with linear warmup) 
-    scheduler = get_lr_scheduler(optimizer, args.warmup_iters, args.decay_iters, args.min_lr, args.max_lr)
+    scheduler = get_lr_scheduler(optimizer, args.warmup_iters, args.n_emb, args.lr)
 
     # configure the loss function
     criterion = nn.CrossEntropyLoss(ignore_index=1)
@@ -133,12 +133,10 @@ if __name__ == "__main__":
     args.batch_size = 16
     args.grad_accumulation_steps = 32
     args.weight_decay = 0.1
-    args.max_lr = 4e-4
-    args.min_lr = 4e-5
+    args.lr = 1e3
     args.betas = (0.9, 0.98)
-    args.eps = 1e-6
+    args.eps = 1e-9
     args.warmup_iters = int(6e3)
-    args.decay_iters = int(12e4)
     args.backend='nccl'
     
     main(args)

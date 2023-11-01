@@ -52,34 +52,21 @@ def get_data(batch_size, langs, max_len, distributed=False):
 
     return dataloader
 
-def CosineAnneallingWarmupLR(iter:int, warmup_iters: int, decay_iters:int, max_lr: float, min_lr: float):
+def LRDecayWarmup(iter:int, warmup_iters: int, dim:int, lr: float):
+    return dim**-0.5 * min(iter**-0.5, iter * warmup_iters ** -1.5)
 
-    # 1) linear warmup for warmup_iters steps
-    if iter < warmup_iters:
-        return max_lr * iter / warmup_iters
-    
-    # 2) if it > lr_decay_iters, return min learning rate
-    if iter > decay_iters:
-        return min_lr
-    
-    # 3) in between, use cosine decay down to min learning rate
-    decay_ratio = (iter - warmup_iters) / (decay_iters - warmup_iters)
-    assert 0 <= decay_ratio <= 1
-    coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
-    return min_lr + coeff * (max_lr - min_lr)
-
-def get_lr_scheduler(optimizer, warmup_iters, decay_iters, min_lr, max_lr):
+def get_lr_scheduler(optimizer, warmup_iters: int, dim: int, lr: float):
     # create the linear warmup and cosine decay
-    lr_lambda = lambda iter: CosineAnneallingWarmupLR(iter, warmup_iters, decay_iters, max_lr, min_lr)
+    lr_lambda = lambda iter: LRDecayWarmup(iter, warmup_iters, dim, lr)
     scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
     return scheduler
 
 # function to implement weight decay to only parameters that have a higher dimension
-def configure_optimizer(model, weight_decay, learning_rate, betas, eps, device_type):
+def configure_optimizer(model, learning_rate, betas, eps, device_type):
         fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
         use_fused = fused_available and device_type == 'cuda'
         extra_args = dict(fused=True) if use_fused else dict()
-        optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, betas=betas, eps=eps, weight_decay=weight_decay, **extra_args)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=betas, eps=eps, **extra_args)
         print(f"using fused AdamW: {use_fused}")
         return optimizer
 

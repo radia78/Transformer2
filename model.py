@@ -224,6 +224,8 @@ class Transformer(nn.Module):
         ))
 
         self.lm_head = nn.Linear(config.n_emb, config.vocab_size, bias=False)
+        self.transformer.src_wte.weight = self.lm_head.weight
+        self.transformer.tgt_wte.weight = self.lm_head.weight
         
         # init all weights
         self.apply(self._init_weights_)
