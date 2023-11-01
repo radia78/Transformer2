@@ -222,11 +222,7 @@ class Transformer(nn.Module):
             dec = nn.ModuleList([DecoderBlock(config) for _ in range(config.n_layer)]),
             ln_f = nn.LayerNorm(config.n_emb)
         ))
-        # the final projection layer
-        self.lm_head = nn.Linear(config.n_emb, config.vocab_size)
-        self.transformer.src_wte.weight = self.lm_head.weight # https://paperswithcode.com/method/weight-tying
-        self.transformer.tgt_wte.weight = self.lm_head.weight
-
+        
         # init all weights
         self.apply(self._init_weights_)
 
