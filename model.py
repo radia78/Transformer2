@@ -149,7 +149,7 @@ class MultiHeadAttention(nn.Module):
         if self.flash: # flash attention go brrrrrrrrrr
             # (B, nh, T, S) x (B, nh, S, hs) -> (B, nh, T, hs)
             y = torch.nn.functional.scaled_dot_product_attention(
-                q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=self.causal)
+                q, k, v, dropout_p=self.dropout if self.training else 0, is_causal=self.causal)
             y = rearrange(y, "b h i d -> b i (h d)")
 
         else:
