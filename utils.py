@@ -62,11 +62,11 @@ def get_lr_scheduler(optimizer, warmup_iters: int, dim: int, lr: float):
     return scheduler
 
 # function to implement weight decay to only parameters that have a higher dimension
-def configure_optimizer(model, learning_rate, betas, eps, device_type):
+def configure_optimizer(model, learning_rate, betas, device_type):
         fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
         use_fused = fused_available and device_type == 'cuda'
         extra_args = dict(fused=True) if use_fused else dict()
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=betas, eps=eps, **extra_args)
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=betas, **extra_args)
         print(f"using fused AdamW: {use_fused}")
         return optimizer
 

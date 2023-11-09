@@ -53,7 +53,7 @@ def train(args):
     scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
 
     # configure the optimizer
-    optimizer = configure_optimizer(model, args.lr, args.betas, args.eps, 'cuda')
+    optimizer = configure_optimizer(model, args.lr, args.betas, 'cuda')
 
     # configure the learning rate scheduler (cosine decay with linear warmup) 
     scheduler = get_lr_scheduler(optimizer, args.warmup_iters, args.n_emb, args.lr)
@@ -136,7 +136,6 @@ if __name__ == "__main__":
     args.label_smoothing = 0.1
     args.lr = 1.0
     args.betas = (0.9, 0.98)
-    args.eps = 1e-9
     args.warmup_iters = int(6e3)
     args.backend='nccl'
     

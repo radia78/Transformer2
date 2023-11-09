@@ -33,7 +33,7 @@ def apply_rotary_pos_emb(pos, t):
 
 # Biao Zhang's implementation of RMS Norm
 class RMSNorm(nn.Module):
-    def __init__(self, d, p=0.00625, eps=1e-8, bias=False):
+    def __init__(self, d, p=0.00625, eps=1e-9, bias=False):
         """
             Root Mean Square Layer Normalization
         :param d: model size
