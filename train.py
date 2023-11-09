@@ -83,7 +83,7 @@ def train(args):
             # use auto mixed precision
             with ctx:
                 output = model(src, tgt[:, :-1]) # output should have shape B, S, Vocab Size (MAKE SURE TO EXCLUDE THE LAST TOKEN SO IT CAN DO AUTOREGRESSIVE DECODING!!!!!!)
-                loss = criterion(output.view(-1, output.size(-1)), tgt[1:].view(-1)) # compare the output with missing eos token and target with missing sos token
+                loss = criterion(output.view(-1, output.size(-1)), tgt[:, 1:].view(-1)) # compare the output with missing eos token and target with missing sos token
                 loss = loss / args.grad_accumulation_steps
 
             # scale the loss
@@ -128,13 +128,13 @@ if __name__ == "__main__":
     args.epochs = 16
     args.langs = ['de', 'en']
     args.run_name = "TransformerV2"
-    args.amp = False
+    args.amp = True
     args.seed = 13332
     args.dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
     args.batch_size = 16
     args.grad_accumulation_steps = 32
     args.label_smoothing = 0.1
-    args.lr = 1.0
+    args.lr = 1e-3
     args.betas = (0.9, 0.98)
     args.warmup_iters = int(6e3)
     args.backend='nccl'

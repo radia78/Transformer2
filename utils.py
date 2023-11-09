@@ -53,7 +53,7 @@ def get_data(batch_size, langs, max_len, distributed=False):
     return dataloader
 
 def LRDecayWarmup(iter:int, warmup_iters: int, dim:int, lr: float):
-    return dim**-0.5 * min(iter**-0.5, iter * warmup_iters ** -1.5)
+    return dim**-0.5 * min((iter + 1)**-0.5, (iter + 1) * warmup_iters ** -1.5)
 
 def get_lr_scheduler(optimizer, warmup_iters: int, dim: int, lr: float):
     # create the linear warmup and cosine decay
