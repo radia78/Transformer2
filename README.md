@@ -27,31 +27,35 @@ The third update is replacing the ReLU activation function with SwiGLU [[3]](#3)
 $$SwiGLU(x, W, V, b, c, \beta) = Swish_{\beta}(xW + b) \otimes (xV + c)$$
 
 ### Training Setup
-I follow LLAMA's and GPT Neo-X's training setup by using an AdamW optimizer with $\beta_1 = 0.9, \beta_2 = 0.95$ and a weight decay of 0.1 [[6]](#6)[[7]](#7). In addition, I follow their cosine learning rate decay schedule as its recently been used more often for training Encoder-Decoder and Decoder-Only architectures. <br>
+I follow the original paper's training setup by using an Adam optimizer with $\beta_1 = 0.9, \beta_2 = 0.98$ and their learning rate schedule. One tweak I made was adjusting the number of warmup steps to the GPU compute available to me. <br>
 
-The original paper and most LLM papers train on huge batch sizes, but due to resource limitations I use a batch size of 8. To address this problem, I used gradient accumulation so that the model only update its gradient every 32 step to simulate a batch size of 256. <br> 
+The original paper and most LLM papers train on huge batch sizes, but due to resource limitations I use a batch size of 16. To address this problem, I used gradient accumulation so that the model only update its gradient every 32 step to simulate a batch size of 512. <br> 
 
-According to [this](https://medium.com/@martin.p.dittgen/reproducing-the-attention-is-all-you-need-paper-from-scratch-d2fb40bb25d4) Medium Article, the original paper trains the model on 16 epochs with a batch size of 724. Since there's roughly 4.5m rows in the training dataset, that means it ran through approximately 6.2k steps per epoch and totaling to 100k steps. Due to my resource limitations, I'm only training my model for 80k steps, which approximates to running the model for 13 epochs. 
+According to this [Medium Article](https://medium.com/@martin.p.dittgen/reproducing-the-attention-is-all-you-need-paper-from-scratch-d2fb40bb25d4), the original paper trains the model on 16 epochs with a batch size of 724. Since there's roughly 4.7m rows in the training dataset, that means it ran through approximately 6.2k steps per epoch and totaling to 100k steps. From these facts, I interpolate that my training would run for approximately 150k steps in total and that my warming up steps is 6k. 
 
 ## Usage
-### Dataset Preparation
-To prepare the data I downloaded Stanford's WMT14 Dataset from [here](https://nlp.stanford.edu/projects/nmt/) and performed some text cleaning like converting "##UNDERSCORE##" to "_". Afterwards, I convert the dataset into a map style dataset and push it to Huggingface Hub. To use the dataset, use the following line of code:
-```
-from datasets import load_dataset
-data = load_dataset('radia/wmt14-de2en')
-```
-The full dataset can be viewed in my HuggingFace page [here](https://huggingface.co/)
-
 ### Tokenizer Preparation
-To prepare the tokenizer, I train a BPE tokenizer using my cleaned dataset. I made sure that the vocabulary size of the tokenizer is consistent with the one from the paper (roughly 37k tokens between German). To train the tokenizer, run the following code on your terminal:
+To prepare the tokenizer, I train a BPE tokenizer based on Huggingfaces' WMT14 German-English dataset. I made sure that the vocabulary size of the tokenizer is consistent with the one from the paper (roughly 37k tokens between German). I trained the tokenizer model and upload it to my Huggingface account. If you want to recreate the project, you can simply access the tokenizer by running the following line Python.
+
 ```
-python3 prepare_tokenizers.py
+PreTrainedTokenizerFast.from_pretrained('radia/wmt14-de2en-tokenizer')
 ```
 
 ## Training the Model
-To be added
+For this experiment, I used a compute engine from Google Cloud with 1 Nvidia L4 GPU. To run the training script, use the following line:
+```
+torchrun --standalone --nproc-per-node=1 train.py
+```
+The training takes 3.5 days approximately.
+
 ## Performance Evaluation
-To be added
+For brevity, I used a greedy search method to generate translation results and use Huggingface's sacrebleu to score my results against the test data. To reproduce the results, run the `evaluate_model.py` script to get the model's BLEU score.
+
+For German to English translation, the model has a BLEU score of 28.1, which is higher than the original transformer's 25.8 for the same model size.
+
+# Conclusion
+The SOTA methods for current LLM's improved the original transformer's performance by 2.3 points! However, much more work is needed to be done on studying parameters that would stabilize the model during training. As my gradients exploded and had to raise RMSNorm's $\epsilon$ parameter to stabilize it. In addition, future work needs to be done on scoring this model on various other tasks such as question and answering and etc. Alternatively, the model could follow Meta's BART pretraining configuration and fine-tune it for specific NLP tasks.
+
 ## References
 <a id="1">[1]</a> 
 Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob
