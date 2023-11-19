@@ -27,7 +27,9 @@ The third update is replacing the ReLU activation function with SwiGLU [[3]](#3)
 $$SwiGLU(x, W, V, b, c, \beta) = Swish_{\beta}(xW + b) \otimes (xV + c)$$
 
 ### Training Setup
-I follow the original paper's training setup by using an Adam optimizer with $\beta_1 = 0.9, \beta_2 = 0.98$ and their learning rate schedule. One tweak I made was adjusting the number of warmup steps to the GPU compute available to me. <br>
+I follow the original paper's training setup by using an Adam optimizer with $\beta_1 = 0.9, \beta_2 = 0.98$, $\epsilon = 10^{-9}$, and . I also followed the original paper's learning rate schedule: <br>
+
+$$Learning Rate = d_{model}^{-0.5} * min(step_num^{-0.5}, step_num * warmup_steps^{-1.5})$$ <br>
 
 The original paper and most LLM papers train on huge batch sizes, but due to resource limitations I use a batch size of 16. To address this problem, I used gradient accumulation so that the model only update its gradient every 32 step to simulate a batch size of 512. <br> 
 
@@ -46,15 +48,21 @@ For this experiment, I used a compute engine from Google Cloud with 1 Nvidia L4 
 ```
 torchrun --standalone --nproc-per-node=1 train.py
 ```
-The training takes 3.5 days approximately.
+The training takes approximately 3.5 days. The training could be faster if the there are multiple GPUs but you would have to tweak the training script to adjust for syncing batches across devices. 
 
 ## Performance Evaluation
-For brevity, I used a greedy search method to generate translation results and use Huggingface's sacrebleu to score my results against the test data. To reproduce the results, run the `evaluate_model.py` script to get the model's BLEU score.
+For brevity, I used a greedy search method to generate translation results and use Huggingface's sacrebleu to score my results against the test data. To reproduce the results, run the `evaluate_model.py` script to get the model's BLEU score. The model is tested on the same WMT14 test set mentioned in the original paper.
 
-For German to English translation, the model has a BLEU score of 28.1, which is higher than the original transformer's 25.8 for the same model size.
+|Type|Parameter Size (in Millions)|Hidden Dimension Size|Heads|Layers|Dropout|BLEU|
+|----|----------------------------|---------------------|-----|------|-------|----|
+|Transformer V2|63|512|8|6|0.1|28.1|
+|Transformers Original (base)|65|512|8|6|0.1|27.3|
+|Transformers Original (big)|213|1024|16|6|0.3|28.4|
 
 # Conclusion
-The SOTA methods for current LLM's improved the original transformer's performance by 2.3 points! However, much more work is needed to be done on studying parameters that would stabilize the model during training. As my gradients exploded and had to raise RMSNorm's $\epsilon$ parameter to stabilize it. In addition, future work needs to be done on scoring this model on various other tasks such as question and answering and etc. Alternatively, the model could follow Meta's BART pretraining configuration and fine-tune it for specific NLP tasks.
+The SOTA methods for current LLM's improved the original transformer's performance by 0.8 points for the same parameters! Not to mention that the SOTA methods shrank the model by 2 million parameters and that it achieves relatively the same result as the bigger model with 150 million less parameters! 
+
+Although there are future works that needs to be done. For starters, I need to run an experiment with the big model size or score my model for other NLP tasks. I could also use Meta's BART pretraining setup and compare the results of the downstream tasks.
 
 ## References
 <a id="1">[1]</a> 
