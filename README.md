@@ -29,7 +29,7 @@ $$SwiGLU(x, W, V, b, c, \beta) = Swish_{\beta}(xW + b) \otimes (xV + c)$$
 ### Training Setup
 I follow the original paper's training setup by using an Adam optimizer with $\beta_1 = 0.9, \beta_2 = 0.98$, $\epsilon = 10^{-9}$, and . I also followed the original paper's learning rate schedule: <br>
 
-$$Learning Rate = d_{model}^{-0.5} \dot min(StepNum^{-0.5}, StepNum \dot WarmupSteps^{-1.5})$$ <br>
+$$Learning Rate = d_{model}^{-0.5} \cdot min(StepNum^{-0.5}, StepNum \cdot WarmupSteps^{-1.5})$$ <br>
 
 The original paper and most LLM papers train on huge batch sizes, but due to resource limitations I use a batch size of 16. To address this problem, I used gradient accumulation so that the model only update its gradient every 32 step to simulate a batch size of 512. <br> 
 
