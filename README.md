@@ -3,7 +3,7 @@ Radi Akbar <br>
 Personal Project
 
 ## Introduction
-The world of NLP is developing at a rapid space. There has been so many updates to the original Transformer architecture, that its hard keeping track of all the progress that happened. This project showcases some of the recent developments in the Transformer architecture through tweaking the sequence-to-sequence model and compare its performance on English to German machine translation task.
+The world of NLP is developing at a rapid pace. There have been many updates to the original Transformer architecture, that its hard to keep track of all the progress. The TransformerV2 project higlights some of the recent developments in the architecture by tweaking the sequence-to-sequence model and compare its performance on English to German machine translation task.
 <p align="center">
   <img src="images/transformer_architecture.png" title="Original Transformer Architecture" width=321 height=435/>
 </p>
@@ -21,23 +21,23 @@ The second update is replacing LayerNorm with RMSNorm [[2]](#2). LayerNorm addre
 **RMS Norm Equation**
 $$\bar{a_i}=\frac{a_i}{RMS(a)}g_i, \text{where } RMS(a) = \sqrt{\frac{1}{n}\sum_{i=1}^{n}a_i^{2}}.$$
 
-The third update is replacing the ReLU activation function with SwiGLU [[3]](#3). It's been shown that SwiGLU improves the performance of NLP tasks. The paper also specifies that to make computation less expensive, they change the hidden size of the MLP component by multiplying it with 2/3.
+The third update is replacing the ReLU activation function with SwiGLU [[3]](#3). It's been shown that SwiGLU improves the performance on NLP tasks. The paper also specifies that to make computation less expensive, they change the hidden size of the MLP component by multiplying it by 2/3.
 
 **SwiGLU**
 $$SwiGLU(x, W, V, b, c, \beta) = Swish_{\beta}(xW + b) \otimes (xV + c)$$
 
 ### Training Setup
-I follow the original paper's training setup by using an Adam optimizer with $\beta_1 = 0.9, \beta_2 = 0.98$, $\epsilon = 10^{-9}$, and . I also followed the original paper's learning rate schedule: <br>
+I follow the original paper's training setup by using an Adam optimizer with $\beta_1 = 0.9, \beta_2 = 0.98$, $\epsilon = 10^{-9}$, and $\epsilon_{ls} = 0.1$. I also followed the original paper's learning rate schedule: <br>
 
 $$Learning Rate = d_{model}^{-0.5} \cdot min(StepNum^{-0.5}, StepNum \cdot WarmupSteps^{-1.5})$$ <br>
 
-The original paper and most LLM papers train on huge batch sizes, but due to resource limitations I use a batch size of 16. To address this problem, I used gradient accumulation so that the model only update its gradient every 32 step to simulate a batch size of 512. <br> 
+Most LLM papers train on huge batch sizes, but due to resource limitations I can only use a batch size of 16. To address this problem, I used gradient accumulation so that the model only update its gradient every 32 steps to simulate a batch size of 512. <br> 
 
-According to this [Medium Article](https://medium.com/@martin.p.dittgen/reproducing-the-attention-is-all-you-need-paper-from-scratch-d2fb40bb25d4), the original paper trains the model on 16 epochs with a batch size of 724. Since there's roughly 4.7m rows in the training dataset, that means it ran through approximately 6.2k steps per epoch and totaling to 100k steps. From these facts, I interpolate that my training would run for approximately 150k steps in total and that my warming up steps is 6k. 
+According to this [Medium Article](https://medium.com/@martin.p.dittgen/reproducing-the-attention-is-all-you-need-paper-from-scratch-d2fb40bb25d4), the original paper trains the model on 16 epochs with a batch size of 724. Since there's roughly 4.7m rows in the training dataset, that means it ran through approximately 6.2k steps per epoch and totaling to 100k steps. From these facts, I interpolated that my training would run for approximately 150k steps in total and that my warming up steps is 6k. 
 
 ## Usage
 ### Tokenizer Preparation
-To prepare the tokenizer, I train a BPE tokenizer based on Huggingfaces' WMT14 German-English dataset. I made sure that the vocabulary size of the tokenizer is consistent with the one from the paper (roughly 37k tokens between German). I trained the tokenizer model and upload it to my Huggingface account. If you want to recreate the project, you can simply access the tokenizer by running the following line Python.
+To prepare the tokenizer, I train a BPE tokenizer based on Huggingfaces' WMT14 German-English dataset. I made sure that the vocabulary size of the tokenizer is consistent with the one from the paper (roughly 37k tokens). I trained the tokenizer model and upload it to my Huggingface account. If you want to recreate the project, you can simply access the tokenizer by running the following line Python.
 
 ```
 PreTrainedTokenizerFast.from_pretrained('radia/wmt14-de2en-tokenizer')
