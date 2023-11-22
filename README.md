@@ -10,20 +10,22 @@ The world of NLP is developing at a rapid pace. There have been many updates to 
 
 ## Training Specifications
 ### Architecture
+**RoPE**
 The architecture of the model remains the same from the original [[1]](#1) but with a few modifications. First update is replacing the Additional Positional Embedding (APE) with Rotary Positional Embedding (ROPE) [[4]](#4). ROPE rotates the embedded sequences to inject positional information instead of adding it. It's been shown that ROPE can hold long-term dependency between words in huge context windows. <br>
 
 <p align="center">
   <img src="images/rope_example.png" title="Rotary Positional Embedding Example" width=425 height=290/>
 </p>
 
+**RMS Normalization**
+
 The second update is replacing LayerNorm with RMSNorm [[2]](#2). LayerNorm addresses the problem of covariance shifts during training by standardizing the inputs by its mean and standard deviation. RMSNorm simplifies the normalization process by only dividing the input by its standard deviation. <br>
 
-**RMS Norm Equation**
 $$\bar{a_i}=\frac{a_i}{RMS(a)}g_i, \text{where } RMS(a) = \sqrt{\frac{1}{n}\sum_{i=1}^{n}a_i^{2}}.$$
 
+**SwiGLU Activation Function**
 The third update is replacing the ReLU activation function with SwiGLU [[3]](#3). It's been shown that SwiGLU improves the performance on NLP tasks. The paper also specifies that to make computation less expensive, they change the hidden size of the MLP component by multiplying it by 2/3.
 
-**SwiGLU**
 $$SwiGLU(x, W, V, b, c, \beta) = Swish_{\beta}(xW + b) \otimes (xV + c)$$
 
 ### Training Setup
