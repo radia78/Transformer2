@@ -24,6 +24,7 @@ The second update is replacing LayerNorm with RMSNorm [[2]](#2). LayerNorm addre
 $$\bar{a_i}=\frac{a_i}{RMS(a)}g_i, \text{where } RMS(a) = \sqrt{\frac{1}{n}\sum_{i=1}^{n}a_i^{2}}.$$
 
 **SwiGLU Activation Function**
+
 The third update is replacing the ReLU activation function with SwiGLU [[3]](#3). It's been shown that SwiGLU improves the performance on NLP tasks. The paper also specifies that to make computation less expensive, they change the hidden size of the MLP component by multiplying it by 2/3.
 
 $$SwiGLU(x, W, V, b, c, \beta) = Swish_{\beta}(xW + b) \otimes (xV + c)$$
